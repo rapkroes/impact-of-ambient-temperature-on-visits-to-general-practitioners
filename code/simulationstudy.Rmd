@@ -1,0 +1,326 @@
+---
+title: "MT Simulation unnormal effects"
+author: "Raphael Kroes"
+date: "2023-09-05"
+output: html_document
+---
+
+```{r}
+# packages
+library(groundhog)
+#library(huge)
+groundhog.library(huge, "2023-09-03")
+groundhog.library(lubridate, "2023-10-02")
+groundhog.library(parallel, "2023-10-02")
+
+```
+
+
+```{r}
+### top level parameters of the simulation
+# number of data points
+n<- 1000000
+# maximum number of patients
+max.no.patients<- 3000
+# maximum number of days under consideration
+max.no.days<- 1000
+# A number of explanatory variables are partially correlated to another. They are partitioned into no.clusters clusters and then with probability covariance.sparsity they are correlated.
+no.clusters<- 4
+cor.prob<- 0.25
+# # covariance scaling factor. Factor to scale the variance of the covariance matrix of the explanatory variables
+# cov.scaling.factor<- 1
+# inverted scale of variance. The higher df.cov, the lower the magnitude of the values in the covariance matrix.
+df.cov<- 12
+# number of outcome classes
+no.outcome.classes<- 6
+# outcome class quantiles. Since the outcome variable can take multiple classes, this script creates a numeric outcome vector and sorts real numbers into intervals, which are proxies for the outcome classes. 
+outcome.class.boundaries<- c(0,0.6+ seq(0,no.outcome.classes)*(no.outcome.classes+1)^(-1),1)
+```
+
+```{r}
+### data generation processes
+##explanatory variables
+explanatory.dgp<- function(n, p, max.no.patients, max.no.days){
+  
+  #how many types of variables are contained?
+  p_rest<- p-4
+  p_cardinal<- round(0.25*p_rest)
+  p_ordinal<- round(0.25*p_rest)
+  p_factor<- p_rest-p_cardinal-p_ordinal
+  
+  
+  #dummies for day, month, year
+  day<- sample(1:max.no.days,n,replace = TRUE)
+  month<- ceiling(day/30)
+  year<- ceiling(month/12)
+  
+  day<- as.factor(day)
+  month<- as.factor(month)
+  year<- as.factor(year)
+  
+  
+  #patient ID
+  uniPatID<- as.factor(sample(1:max.no.patients,n,replace = TRUE))
+  
+  
+  
+  
+  x_rest<- huge.generator(n = n, d = p_rest, graph = "cluster", g= no.clusters, prob = cor.prob)$data
+  x_rest<- as.data.frame(x_rest)
+  
+  # create ordinal data for ordinal columns
+  x_rest[,1:p_ordinal]<- round(x_rest[,1:p_ordinal])
+  
+  #Create factor data. This relies on a link function and factor levels.
+  no.levels.vec<- sample(2:8, p_factor, replace = TRUE, prob = c(0.5,rep(1/6,6)))
+  
+  for (i in seq(1,p_factor)) {
+    l<- no.levels.vec[i]
+    col<- p_ordinal+ i
+    y<- x_rest[,col]
+    x_rest[,col]<- as.factor(cut(y, breaks= l))
+  }
+  
+  #combine data
+  x<- cbind(uniPatID, day, month, year, x_rest)
+  
+  
+  #return data
+  return(x)
+}
+
+##outcome variable
+# 1. benchmark: constant average effect with normal error
+dgp_1<- function(beta_0,beta.vec_1,x){
+  browser()
+  if(dim(x)[2]!=length(beta.vec_1)) stop("length of beta.vec_1 must be equal to number of variables in x")
+  y<- beta_0+as.matrix(x)%*%beta.vec_1+rnorm(n)
+  q<- quantile(y, probs= outcome.class.boundaries)
+  y<- cut(y, breaks = q)
+  return(y)
+}
+
+# 2. nonlinear effect
+dgp_2<- function(beta_0,beta.vec_1,beta.vec_2,alpha,x){
+  y<- beta_0+x%*%beta.vec_1+ ((x[,p])^alpha)%*%beta.vec_2+rnorm(n)
+  q<- quantile(y, probs= outcome.class.boundaries)
+  y<- cut(y, breaks = q)
+  return(y)
+}
+
+# 3. (not) captured interaction with some other variable
+dgp_3<- function(beta_0,beta.vec_1,beta_3,i,x){
+  y<- beta_0+x%*%beta.vec_1+beta_3*x[,i]*x[,p]+rnorm(n)
+  q<- quantile(y, probs= outcome.class.boundaries)
+  y<- cut(y, breaks = q)
+  return(y)
+}
+
+# 4. OVB
+dgp_4<- function(beta_0,beta.vec_1,no.drop,x){
+  y<- beta_0+x%*%beta.vec_1+rnorm(n)
+  d<- sample(4:p, no.drop, replace = FALSE)
+  x_new<- x[,-d]
+  q<- quantile(y, probs= outcome.class.boundaries)
+  y<- cut(y, breaks = q)
+  return(list(y,x_new))
+}
+
+# 5. nonlinear effects, interaction, OVB
+dgp_5<- function(beta_0,beta.vec_1,beta.vec_2,alpha,beta_3,i,no.drop,x){
+  y<- beta_0+x%*%beta.vec_1+ ((x[,p])^alpha)%*%beta.vec_2+beta_3*x[,i]*x[,p]+rnorm(n)
+  q<- quantile(y, probs= outcome.class.boundaries)
+  y<- cut(y, breaks = q)
+  d<- sample(4:p, no.drop, replace = FALSE)
+  x_new<- x[,-d]
+  return(list(y,x_new))
+}
+```
+```{r}
+#creating random data (1)
+set.seed(68178331)
+X<- explanatory.dgp(n,p,max.no.patients,max.no.days)
+```
+
+
+```{r}
+
+```
+
+
+
+```{r}
+# hyperparameters for the simulation
+set.seed(8718641)
+
+beta_0_1<- 0
+beta_0_2<- 0.5
+beta_0_3<- 5
+
+no.coeff<- 0
+for(i in seq(1,p)){
+  if(is.factor(X[,i])){
+    no.coeff<- no.coeff+ length(levels(X[,i]))
+  }else{
+    no.coeff<- no.coeff+1
+  }
+}
+
+beta_1_1<- runif(no.coeff,-0.5,0.5)
+beta_1_2<- runif(no.coeff,-1,1)
+beta_1_3<- runif(no.coeff,-5,5)
+
+beta_2_1<- runif(no.coeff,-0.5,0.5)
+beta_2_2<- runif(no.coeff,-1,1)
+beta_2_3<- runif(no.coeff,-5,5)
+
+alpha_1<- 2
+alpha_2<- 2.2
+alpha_3<- 3
+
+beta_3_1<- runif(1,-0.5,0.5)
+beta_3_2<- runif(1,-1,1)
+beta_3_3<- runif(1,-5,5)
+
+i.col_1<- function(beta_1){
+  which.min(abs(beta_1))
+}
+i.col_2<- function(beta_1){
+  which.max(abs(beta_1))
+}
+
+```
+
+```{r}
+#creating random data (2)
+set.seed(68178331)
+Y_1_1<- dgp_1(beta_0 = beta_0_1, beta.vec_1 = beta_1_1, x = X)
+```
+
+
+Part 2: use dummy data to try it all out
+```{r}
+#'merge' data
+set.seed(16516)
+fake.complete.data<- fake.Diag3[,-c(2,4)]
+stamm.attachment<- as.data.frame(matrix(NA,nrow= nrow(fake.Diag3), ncol= ncol(fake.Stamm3)))
+for(i in seq(1,nrow(fake.Diag3))){
+  stamm.attachment[i,]<- fake.Stamm3[sample(seq(1,nrow(fake.Stamm3)),1),]
+}
+stamm.attachment<- stamm.attachment[,-c(1:5,16)]
+impf.attachment<- as.data.frame(matrix(sample(0:1,2*nrow(fake.Diag3),replace = TRUE), ncol=2))
+colnames(impf.attachment)<- c("influenzashot","covidshot")
+fake.complete.data<- cbind(fake.complete.data, stamm.attachment,impf.attachment)
+
+```
+```{r}
+n<- nrow(fake.complete.data)
+```
+```{r}
+#function for classifying outcome variable
+icd10.to.category<- function(icd10vector){
+  n<- length(icd10vector)
+  out<- numeric(n)
+  for (i in seq(1,n)) {
+    k<- icd10vector[i]
+    l<- substr(k,1,1)
+    m<- as.numeric(substr(k,2,2))
+    o<- as.numeric(substr(k,3,3))
+    p<- 10*m+o
+    if(grepl("X31",k)|grepl("T68",k)|grepl("T69",k)){
+      out[i]<- "Directly cold-related injury"
+    }else if(grepl("X30",k)|grepl("P81.0",k)|grepl("T67",k)){
+      out[i]<- "Direct heat-related injury"
+    }else if(l=="I" & p<=78){
+      out[i]<- "Major cardiovascular diseases"
+    }else if(l=="V"|l=="W"|l=="X"|l=="Y"){
+      if(!(grepl("X31",k) | grepl("X31",k))){
+        out[i]<- "External causes of morbidity"
+      }
+    }else if(l=="F"){
+      out[i]<- "Mental and behavioural disorders"
+    }else if(l=="J"){
+      out[i]<- "Diseases of the respiratory system"
+    }else if(l=="E"){
+      out[i]<- "Endocrine, nutritional, and metabolic disorders"
+    }else if(l=="K" & p<=93){
+      out[i]<- "Diseases of the digestive system"
+    }else if(l=="N" & p<=98){
+      out[i]<- "Genitourinary disorders"
+    }else if(l=="M"){
+      out[i]<- "Musculoskeletal disorders "
+    }else{
+      out[i]<- "Other diseases and injuries"
+    }
+  }
+  return(as.factor(out))
+}
+```
+```{r}
+fake.complete.data$icd10<- icd10.to.category(fake.complete.data$icd10)
+```
+```{r}
+# add dummies for weeks/ months/ years
+week.month.year.creator<- function(df){
+  week_vec<- isoweek(TG_DateNum2date(df$TG_DateNum))
+  year_vec<- isoyear(TG_DateNum2date(df$TG_DateNum))
+  month_vec<- month(TG_DateNum2date(df$TG_DateNum))
+  return(cbind(df, week_vec, year_vec, month_vec))
+}
+
+```
+```{r}
+fake.complete.data<- week.month.year.creator(fake.complete.data)
+```
+```{r}
+#creates one column for public holiday dummy and one for school holiday dummy. If the day is a public holiday, the school holiday is set to 0 automatically, even if the day is in fact also a school holiday.
+#function depends on numeric.holidays
+holiday.dummy.creator<- function(df){
+  date.vec<- levels(as.factor(df$TG_DateNum))
+  school.holiday<- numeric(length = length(date.vec))
+  public.holiday<- numeric(length = length(date.vec))
+  for(i in seq(1,length(date.vec))){
+    im<- as.numeric(date.vec[i])
+    logi.vec<- numeric.holidays[,1]>=im & numeric.holidays[,2]<=im
+    if(sum(logi.vec)==0){
+      school.holiday[i]<- 0
+      public.holiday[i]<- 0
+    }else if(sum(logi.vec)==1){
+      loc<- which(logi.vec)
+      if(numeric.holidays$public.holiday[loc]==1){
+        school.holiday[i]<- 0
+        public.holiday[i]<- 1
+      }else{
+        school.holiday[i]<- 1
+        public.holiday[i]<- 0
+      }
+    }else if(sum(logi.vec)==2){
+      school.holiday[i]<- 0
+      public.holiday[i]<- 1
+    }else{
+      stop("There is some serious error in numeric.holiday- too much overlap of holidays")
+    }
+  }
+  for(i in seq(1,nrow(df))){
+    loc<- which(date.vec==df$TG_DateNum[i])
+    school.vec<- school.holiday[loc]
+    public.vec<- public.holiday[loc]
+  }
+  out<- cbind(df,school.vec, public.vec)
+  colnames(out)<- c(colnames(df), "school_holiday","public_holiday")
+  return(out)
+}
+
+```
+```{r}
+fake.complete.data<- holiday.dummy.creator(fake.complete.data)
+```
+```{r}
+#extract weather data
+
+```
+
+
+
+
+

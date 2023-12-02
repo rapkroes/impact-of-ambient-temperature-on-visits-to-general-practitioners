@@ -1,0 +1,38 @@
+---
+title: "Plots MT"
+author: "Raphael Kroes"
+date: "2023-11-22"
+output: html_document
+---
+
+```{r}
+#Heatwaves: 97% quantile
+
+library(ggplot2)
+wetter.baiersbronn <- read.csv("C:/Users/Raphael (limited)/Desktop/Master Thesis/weather data/wetter baiersbronn.csv")
+row.selector<- 13+seq(0,365*24, by=24)
+temperatures<- as.numeric(wetter.baiersbronn$temperature_2m...C.[row.selector])
+dates<- as.Date(substr(wetter.baiersbronn$time[row.selector],1,10))
+df<- data.frame(date = dates, temperature = temperatures)
+threshold <- quantile(df$temperature, 0.95)
+plot_1 <- ggplot(df, aes(x = date, y = temperature)) +
+  geom_line() +  # Add a line to connect the points
+  labs(title = "Temperature Time Series",
+       x = "Date",
+       y = "Temperature (in degrees)") +
+  theme_minimal()  # Customize the theme if needed
+
+plot_2 <- ggplot(df, aes(x = date, y = temperature, fill = temperature > threshold)) +
+  geom_bar(stat = "identity") +  # Create a bar plot
+  scale_fill_manual(values = c("skyblue", "red"),
+                    name = "Temperature regime",
+                    labels = c("temperatures below 95% quantile", "temperatures above 95% quantile")) +  # Set fill colors, legend title, and labels
+  labs(title = "Daily Ambient Temperature in Baiersbronn, 2016",
+       x = "Date",
+       y = "Temperature (in degrees)") +
+  theme_minimal() +  # Customize the theme if needed
+  theme(legend.position = "bottom")
+print(plot_1)
+print(plot_2)
+```
+

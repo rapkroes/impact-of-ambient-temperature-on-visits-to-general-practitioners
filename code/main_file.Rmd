@@ -1,0 +1,12 @@
+---
+title: "Impact of Ambient Temperature on Visits to General Practitioners"
+author: "Raphael Kroes"
+date: "2023-12-02"
+output: html_document
+---
+
+This is the main Markdown file for the data analysis 
+```{r}
+
+```
+
