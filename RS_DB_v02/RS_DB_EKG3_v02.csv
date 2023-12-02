@@ -1,0 +1,25 @@
+uniPatID;PatID;TG_DateNum;index_i;PraxisID;Uhrzeit_h;Uhrzeit_m;Befund;HF;P;QT;STV;STVNr;QRS;PQ;QTc;Achse;QTcDisp
+74;1822;737205;690883;4;8;21;;105;102;440;-0.04;2;89;160;418;NaN;38
+74;25839;737209;276407;4;8;14;;82;113;388;0.09;3;96;160;440;NaN;52
+74;16423;737310;1263251;1;NaN;NaN;normofrequenter Sinusrhythmus \\ Normaltyp \\ unauffälliges EKG;65;125;355;-0.08;3;87;181;429;NaN;22
+74;28164;737406;10396;2;15;34;normofrequenter Sinusrhythmus \\ Steiltyp \\ mögliche linksventrikuläre Hypertrophie \\ möglicher anteroseptaler Infarkt;137;98;462;0.05;4;105;153;394;NaN;33
+74;12583;737678;61841;4;NaN;NaN;Linkstyp \\ QRS  100 ms    P   86 ms    PQ  219 ms    QTc  410 ms \\ Achse    1 ø \\ max. ST-Hebung in V3:  0.09 mV,   max. ST-Senkung in aVR: -0.05 mV;61;98;384;0.08;6;151;213;513;NaN;NaN
+74;30764;737947;2232898;1;8;8;normofrequenter Sinusrhythmus \\ Linkstyp \\ unauffälliges EKG;111;123;408;0.15;5;109;146;494;NaN;126
+74;19993;738041;991447;5;NaN;NaN;normofrequenter Sinusrhythmus \\ Normaltyp \\ unauffälliges EKG \\ QRS   95 ms    P   99 ms    PQ  196 ms    QTc  422 ms \\ Achse   39 ø \\ max. ST-Hebung in V3:  0.06 mV,   max. ST-Senkung in I: -0.01 mV;58;93;369;0.05;3;101;182;446;NaN;46
+74;11874;738126;2016462;1;NaN;32;normofrequenter Sinusrhythmus mit Sinusarrhythmie \\ überdrehter Rechtstyp \\ sonst unauffälliges EKG;66;107;430;0.16;3;95;141;454;NaN;43
+74;2130;738407;694093;4;11;NaN;;72;119;409;0.08;3;105;158;462;NaN;38
+17269;9985;738386;320851;1;8;NaN;normofrequenter Sinusrhythmus \\ Linkstyp \\ nicht-spezifische verbreiterte P-Welle \\ periphere Niedervoltage \\  septaler Infarkt;54;121;373;0.1;3;92;182;466;NaN;31
+19957;27143;736420;475227;2;11;NaN;;62;121;407;0.05;4;145;183;460;NaN;25
+19957;31836;736698;1143288;4;NaN;48;normofrequenter Sinusrhythmus \\ Linkstyp \\ unauffälliges EKG;81;111;454;0.1;2;92;114;NaN;NaN;41
+21225;2632;737524;1792160;2;10;NaN;normofrequenter Sinusrhythmus \\ Steiltyp \\ unauffälliges EKG \\ QRS  101 ms    P  108 ms    PQ  168 ms    QTc  406 ms \\ Achse   68 ø \\ max. ST-Hebung in V2:  0.15 mV,   max. ST-Senkung in aVR: -0.07 mV;80;121;325;0.11;3;118;155;431;NaN;48
+21733;426;736454;944485;1;NaN;28;;67;131;433;0.15;3;113;203;425;NaN;54
+21733;25743;736454;505025;6;NaN;NaN;normofrequenter Sinusrhythmus, 2 monotope VES \\ überdrehter Rechtstyp \\ unspez. intraventrikulärer Block \\ ST-Senkung in inferioren Ableitungen, Hyperkaliämie möglich \\ akuter anteroseptaler Infarkt \\ QRS  122 ms    P   63 ms    PQ   80 ms    QTc  390 ms \\ Achse  -95 ° \\ max. ST-Hebung in V3:  1.71 mV,   max. ST-Senkung in II: -0.23 mV;85;93;420;0.05;3;110;139;420;NaN;NaN
+21733;9261;736582;795247;1;NaN;NaN;;NaN;107;403;0.1;4;132;NaN;485;NaN;56
+24388;14780;737621;819470;1;NaN;31;;72;102;364;-0.07;3;98;122;401;NaN;6
+24448;17543;737754;1373437;2;NaN;26;;60;110;407;0.05;3;110;192;424;NaN;39
+25791;12245;737629;231530;5;8;NaN;;71;101;409;0.06;3;93;195;400;NaN;22
+34256;17739;737267;690617;5;10;NaN;;75;112;394;0.07;2;110;179;471;NaN;NaN
+38156;27461;738553;478594;1;15;29;normofrequenter Sinusrhythmus \\ Steiltyp \\ anteroseptaler Infarkt im Stadium III \\ QRS   95 ms    P  105 ms    PQ  138 ms    QTc  431 ms \\ Achse   66 ø \\ max. ST-Hebung in V3:  0.07 mV,   max. ST-Senkung in aVL: -0.02 mV;66;93;385;0.1;2;82;159;416;NaN;NaN
+39059;17189;738580;984159;1;NaN;38;;78;111;395;0.02;3;85;144;470;NaN;NaN
+46502;13238;738471;866381;8;NaN;NaN;Vorhofflimmern mit variabler Überleitung \\ Steiltyp \\ QT-Verlängerung;58;118;494;0.18;1;118;178;442;NaN;33
+47262;218;738183;1646689;2;NaN;NaN;bradykarder Sinusrhythmus \\ Normaltyp \\ verbreiterte P-Welle \\ sonst unauffälliges EKG;73;76;427;-0.19;4;115;160;425;NaN;32

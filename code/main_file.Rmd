@@ -5,8 +5,15 @@ date: "2023-12-02"
 output: html_document
 ---
 
-This is the main Markdown file for the data analysis 
+This is the main Markdown file for the data analysis of 'Impact of Ambient Temperature on Visits to General Practitioners' by Raphael Kroes.
+The original data cannot be provided publicly because of data protection reasons. However, a fake dataset is provided, which can be used to test the code.
 ```{r}
+fake.data<- TRUE
+if(fake.data){
+  #source fakedgp_mt.R
+}else{
+  #read in other data
+}
 
 ```
 
