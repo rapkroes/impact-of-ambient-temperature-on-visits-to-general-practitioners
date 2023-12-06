@@ -1,12 +1,5 @@
 ###Fake Data Generation Process###
 
-library(readxl)
-altersstruktur_deutschland <- read_excel("C:/Users/Raphael (limited)/Downloads/altersstruktur deutschland.xlsx")
-ListeKrankenkassen <- read.csv("C:/Users/Raphael (limited)/Downloads/ListeKrankenkassen_up.csv")
-icd10_blocks <- read_excel("icd10_blocks.xlsx")
-Impf3 <- read.csv("C:/Users/Raphael (limited)/Downloads/RS_DB_v02/RS_DB_Impf3_v02.csv", sep=";")
-Labor3 <- read.csv2("C:/Users/Raphael (limited)/Downloads/RS_DB_v02/RS_DB_Labor3_v02.csv")
-
 art.data<- function(n){
   #creates a list of data frames with n entries, with entries trying to emulate the original data sets. 
   ID.levels<- seq(1,n/4)
@@ -19,7 +12,7 @@ art.data<- function(n){
     TG_DateNum= sample(date.vec,n/4, replace = TRUE),
     index_i=NA,
     PraxisID=NA,
-    PLZ= NA,
+    PLZ= as.factor(sample(1:10,n/4,replace = TRUE)),
     Entfernung=NA,
     Geburtsjahr= sample(1920:2010,n/4,replace = TRUE),
     Geburtsmonat= sample(1:12,n/4, replace = TRUE),
@@ -49,65 +42,46 @@ art.data<- function(n){
       art.diag$TG_DateNum[i]<- art.diag$TG_DateNum[i-1]
     }
   }
-  
-  art.impf<- Impf3[sample(1:nrow(Impf3),n,replace = TRUE),]
-  art.impf$uniPatID<- sample(ID.levels,n, replace = TRUE)
-  art.impf$TG_DateNum<- sample(date.vec,n,replace = TRUE)
-  
-  art.ipc<- data.frame(
-    uniPatID= sample(ID.levels,n, replace = TRUE),
-    TG_DateNum= diag.dates-sample(0:75,n, replace = TRUE),
-    AnamnTyp=sample(c("A","B"),n,replace = TRUE),
-    ipc2="R05"
-  )
-  probs<- runif(n)
-  for(i in seq(2,n)){
-    if(probs[i]<=0.1){
-      art.ipc$uniPatID[i]<- art.ipc$uniPatID[i-1]
-      art.ipc$TG_DateNum[i]<- art.ipc$TG_DateNum[i-1]
-    }
-  }
-  
-  art.lab<- Labor3[sample(1:nrow(Labor3),n,replace = TRUE),]
-  art.lab$uniPatID<- sample(ID.levels,n, replace = TRUE)
-  art.lab$TG_DateNum<- sample(date.vec,n,replace = TRUE)
-  probs<- runif(n)
-  for(i in seq(2,n)){
-    if(probs[i]<=0.1){
-      art.lab$uniPatID[i]<- art.lab$uniPatID[i-1]
-      art.lab$TG_DateNum[i]<- art.lab$TG_DateNum[i-1]
-    }
-  }
-  
-  art.lu<- data.frame(
-    uniPatID= sample(ID.levels,n, replace = TRUE),
-    TG_DateNum= sample(date.vec,n,replace = TRUE)
+
+  art.konsul<- data.frame(
+    uniPatID= ID.levels,
+    PatID= NA,
+    TG_DateNum= art.stamm$TG_DateNum,
+    index_i=NA,
+    PraxisID= sample(1:7,n/4, replace = TRUE),
+    Praxisbesuch=NA,
+    Anz_EBMs= NA,
+    UeberweiserBSNR= NA,
+    UeberweiserLANR= NA,
+    PZN= NA,
+    TG_NKH= NA,
+    TG_Ueberw= NA,
+    TG_AUB= NA,
+    TG_AUDauer= NA,
+    TG_Hausbes= NA,
+    TG_HausbesMFA= NA,
+    TG_HAVertrag= NA,
+    TG_A_Rauchen= sample(c(0,1),n/4, replace = TRUE),
+    TG_RF_Rauchen= sample(c(0,1),n/4, replace = TRUE),
+    TG_A_Alkohol= sample(c(0,1),n/4, replace = TRUE),
+    TG_RF_Alkohol= sample(c(0,1),n/4, replace = TRUE),
+    TG_A_Sport= sample(c(0,1),n/4, replace = TRUE),
+    TG_RF_Sport= sample(c(0,1),n/4, replace = TRUE),
+    verzogen= NA,
+    verstorben= NA
   )
   
-  art.pzn<- data.frame(
-    uniPatID= sample(ID.levels,n, replace = TRUE),
-    TG_DateNum= sample(date.vec,n,replace = TRUE),
-    PZN=sample(1:10000,10*n,replace = TRUE)
-  )
-  
-  art.ueberweis<- data.frame(
-    uniPatID= sample(ID.levels,n, replace = TRUE),
-    TG_DateNum= sample(date.vec,n,replace = TRUE),
-    Uberw_Pneumo= sample(0:1,n,replace = TRUE),
-    Uberw_Radiol= sample(0:1,n,replace = TRUE),
-    Uberw_KH= sample(0:1,n,replace = TRUE)
-  )
   
   return(list(
-    art.diag,art.impf,art.ipc,art.lab,art.lu,art.pzn,art.stamm,art.ueberweis
+    art.diag,art.stamm,art.konsul
   ))
 }    
 
-names.vec<- c("Diag3","Impf3","IPC23","Labor3","LU3","PZN3","Stamm3","Ueberweis3")
+names.vec<- c("Diag3","Stamm3","Konsul3")
 
-set.seed(531351)
+set.seed(81461650)
 dl<- art.data(10000)
-for(i in 1:8){
+for(i in seq_along(names.vec)){
   assign(names.vec[i],dl[[i]])
 }
 

@@ -8,12 +8,27 @@ output: html_document
 This is the main Markdown file for the data analysis of 'Impact of Ambient Temperature on Visits to General Practitioners' by Raphael Kroes.
 The original data cannot be provided publicly because of data protection reasons. However, a fake dataset is provided, which can be used to test the code.
 ```{r}
+rm(list = ls())
+library(devtools)
+
+```
+```{r}
+
+#read in auxiliary data files
+ListeKrankenkassen<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/ListeKrankenkassen_up.csv")
+
+
 fake.data<- TRUE
 if(fake.data){
-  #source fakedgp_mt.R
+  source_url("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/code/fakedgp_mt.R")
 }else{
   #read in other data
 }
+
+```
+First, the Stamm and Konsul must be merged to Diag, and the resulting data frame must be cleared.
+```{r}
+
 
 ```
 
