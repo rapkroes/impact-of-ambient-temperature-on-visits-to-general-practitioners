@@ -16,7 +16,7 @@ library(readxl)
 
 #read in auxiliary data files
 ListeKrankenkassen<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/ListeKrankenkassen_up.csv")
-classification.matrix<- read_xlsx("")
+classification.matrix<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/classification.csv")
 
 fake.data<- TRUE
 if(fake.data){
