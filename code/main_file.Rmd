@@ -10,13 +10,13 @@ The original data cannot be provided publicly because of data protection reasons
 ```{r}
 rm(list = ls())
 library(devtools)
-
+library(readxl)
 ```
 ```{r}
 
 #read in auxiliary data files
 ListeKrankenkassen<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/ListeKrankenkassen_up.csv")
-
+classification.matrix<- read_xlsx("")
 
 fake.data<- TRUE
 if(fake.data){
