@@ -1,0 +1,56 @@
+---
+title: "Impact of Ambient Temperature on Visits to General Practitioners"
+author: "Raphael Kroes"
+date: "2023-12-02"
+output: html_document
+---
+
+This is the main Markdown file for the data analysis of 'Impact of Ambient Temperature on Visits to General Practitioners' by Raphael Kroes.
+The original data cannot be provided publicly because of data protection reasons. However, a fake dataset is provided, which can be used to test the code.
+```{r}
+rm(list = ls())
+library(devtools)
+library(readxl)
+library(lubridate)
+library(dplyr)
+```
+```{r}
+
+#read in auxiliary data files
+ListeKrankenkassen<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/ListeKrankenkassen_up.csv")
+classification.matrix<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/classification.csv")
+
+fake.data<- TRUE
+if(fake.data){
+  source_url("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/code/fakedgp_mt.R")
+}else{
+  #read in other data
+}
+
+```
+We must check Diag's icd10 column: Since the icd10 field is a text field in the GP's software, the data might contain typing errors or atypical notation of diseases. This function returns a vector that filters out whose entries are =1 if they are 'suspicious' and 0 otherwise. An entry is considered suspicious if it does not have a length of 4, 6, or 7 characters. If it has 4, 6, or 7 characters it is suspicious if it does not follow either of the patterns "capital letter, two numbers, capital letter" or "capital letter, two numbers, fullstop, one or two numbers, capital letter".
+```{r}
+View(Diag3[as.logical(suspicious.Diag.entries(Diag3$icd10)),])
+```
+
+Stamm and Konsul must be merged to Diag, and the resulting data frame must be cleared.
+```{r}
+full.df
+
+# find chronic diseases
+chronic.df<- as.data.frame(cbind(Diag3$uniPatID,Diag3$icd10)[Diag3$DiagTyp=="DD",])
+colnames(chronic.df)<- c("uniPatID", "diag_category")
+chronic.df$diag_category<- icd10.to.class(chronic.df$diag_category)
+
+# gender variable
+gender.selector<- full.df$Weibl==1 | full.df$Maennl==1 | full.df$stamm.is.there==0
+full.df$female<- full.df$Weibl[gender.selector]
+full.df<- full.df[gender.selector,]|>
+  select(-Weibl,-Maennl,-Trangen,-Divers,-Geschlundef)
+
+# last step: create factor variable of PraxisID
+full.df$PraxisID<- as.factor(full.df$PraxisID)
+```
+
+
+
