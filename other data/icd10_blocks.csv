@@ -1,0 +1,242 @@
+﻿start_code,end_code,description,start_code_letter,start_code_no,end_code_letter,end_code_no
+A00,A09,Infektiöse Darmkrankheiten,A,0,A,9
+A15,A19,Tuberkulose,A,15,A,19
+A20,A28,Bestimmte bakterielle Zoonosen,A,20,A,28
+A30,A49,Sonstige bakterielle Krankheiten,A,30,A,49
+A50,A64,"Infektionen, die vorwiegend durch Geschlechtsverkehr übertragen werden",A,50,A,64
+A65,A69,Sonstige Spirochätenkrankheiten,A,65,A,69
+A70,A74,Sonstige Krankheiten durch Chlamydien,A,70,A,74
+A75,A79,Rickettsiosen,A,75,A,79
+A80,A89,Virusinfektionen des Zentralnervensystems,A,80,A,89
+A92,A99,Durch Arthropoden übertragene Viruskrankheiten und virale hämorrhagische Fieber,A,92,A,99
+B00,B09,"Virusinfektionen, die durch Haut- und Schleimhautläsionen gekennzeichnet sind",B,0,B,9
+B15,B19,Virushepatitis,B,15,B,19
+B20,B24,HIV-Krankheit [Humane Immundefizienz-Viruskrankheit],B,20,B,24
+B25,B34,Sonstige Viruskrankheiten,B,25,B,34
+B35,B49,Mykosen,B,35,B,49
+B50,B64,Protozoenkrankheiten,B,50,B,64
+B65,B83,Helminthosen,B,65,B,83
+B85,B89,"Pedikulose [Läusebefall], Akarinose [Milbenbefall] und sonstiger Parasitenbefall der Haut",B,85,B,89
+B90,B94,Folgezustände von infektiösen und parasitären Krankheiten,B,90,B,94
+B95,B98,"Bakterien, Viren und sonstige Infektionserreger als Ursache von Krankheiten, die in anderen Kapiteln klassifiziert sind",B,95,B,98
+B99,B99,Sonstige Infektionskrankheiten,B,99,B,99
+C00,C14,"Bösartige Neubildungen der Lippe, der Mundhöhle und des Pharynx",C,0,C,14
+C15,C26,Bösartige Neubildungen der Verdauungsorgane,C,15,C,26
+C30,C39,Bösartige Neubildungen der Atmungsorgane und sonstiger intrathorakaler Organe,C,30,C,39
+C40,C41,Bösartige Neubildungen des Knochens und des Gelenkknorpels,C,40,C,41
+C43,C44,Melanom und sonstige bösartige Neubildungen der Haut,C,43,C,44
+C45,C49,Bösartige Neubildungen des mesothelialen Gewebes und des Weichteilgewebes,C,45,C,49
+C50,C50,Bösartige Neubildungen der Brustdrüse [Mamma],C,50,C,50
+C51,C58,Bösartige Neubildungen der weiblichen Genitalorgane,C,51,C,58
+C60,C63,Bösartige Neubildungen der männlichen Genitalorgane,C,60,C,63
+C64,C68,Bösartige Neubildungen der Harnorgane,C,64,C,68
+C69,C72,"Bösartige Neubildungen des Auges, des Gehirns und sonstiger Teile des Zentralnervensystems",C,69,C,72
+C73,C75,Bösartige Neubildungen der Schilddrüse und sonstiger endokriner Drüsen,C,73,C,75
+C76,C80,"Bösartige Neubildungen ungenau bezeichneter, sekundärer und nicht näher bezeichneter Lokalisationen",C,76,C,80
+C81,C96,"Bösartige Neubildungen des lymphatischen, blutbildenden und verwandten Gewebes, als primär festgestellt oder vermutet",C,81,C,96
+C97,C97,Bösartige Neubildungen als Primärtumoren an mehreren Lokalisationen,C,97,C,97
+D00,D09,In-situ-Neubildungen,D,0,D,9
+D10,D36,Gutartige Neubildungen,D,10,D,36
+D37,D48,Neubildungen unsicheren oder unbekannten Verhaltens,D,37,D,48
+D50,D53,Alimentäre Anämien,D,50,D,53
+D55,D59,Hämolytische Anämien,D,55,D,59
+D60,D64,Aplastische und sonstige Anämien,D,60,D,64
+D65,D69,"Koagulopathien, Purpura und sonstige hämorrhagische Diathesen",D,65,D,69
+D70,D77,Sonstige Krankheiten des Blutes und der blutbildenden Organe,D,70,D,77
+D80,D90,Bestimmte Störungen mit Beteiligung des Immunsystems,D,80,D,90
+E00,E07,Krankheiten der Schilddrüse,E,0,E,7
+E10,E14,Diabetes mellitus,E,10,E,14
+E15,E16,Sonstige Störungen der Blutglukose-Regulation und der inneren Sekretion des Pankreas,E,15,E,16
+E20,E35,Krankheiten sonstiger endokriner Drüsen,E,20,E,35
+E40,E46,Mangelernährung,E,40,E,46
+E50,E64,Sonstige alimentäre Mangelzustände,E,50,E,64
+E65,E68,Adipositas und sonstige Überernährung,E,65,E,68
+E70,E90,Stoffwechselstörungen,E,70,E,90
+F00,F09,"Organische, einschließlich symptomatischer psychischer Störungen",F,0,F,9
+F10,F19,Psychische und Verhaltensstörungen durch psychotrope Substanzen,F,10,F,19
+F20,F29,"Schizophrenie, schizotype und wahnhafte Störungen",F,20,F,29
+F30,F39,Affektive Störungen,F,30,F,39
+F40,F48,"Neurotische, Belastungs- und somatoforme Störungen",F,40,F,48
+F50,F59,Verhaltensauffälligkeiten mit körperlichen Störungen und Faktoren,F,50,F,59
+F60,F69,Persönlichkeits- und Verhaltensstörungen,F,60,F,69
+F70,F79,Intelligenzstörung,F,70,F,79
+F80,F89,Entwicklungsstörungen,F,80,F,89
+F90,F98,Verhaltens- und emotionale Störungen mit Beginn in der Kindheit und Jugend,F,90,F,98
+F99,F99,Nicht näher bezeichnete psychische Störungen,F,99,F,99
+G00,G09,Entzündliche Krankheiten des Zentralnervensystems,G,0,G,9
+G10,G14,"Systematrophien, die vorwiegend das Zentralnervensystem betreffen",G,10,G,14
+G20,G26,Extrapyramidale Krankheiten und Bewegungsstörungen,G,20,G,26
+G30,G32,Sonstige degenerative Krankheiten des Nervensystems,G,30,G,32
+G35,G37,Demyelinisierende Krankheiten des Zentralnervensystems,G,35,G,37
+G40,G47,Episodische und paroxysmale Krankheiten des Nervensystems,G,40,G,47
+G50,G59,"Krankheiten von Nerven, Nervenwurzeln und Nervenplexus",G,50,G,59
+G60,G64,Polyneuropathien und sonstige Krankheiten des peripheren Nervensystems,G,60,G,64
+G70,G73,Krankheiten im Bereich der neuromuskulären Synapse und des Muskels,G,70,G,73
+G80,G83,Zerebrale Lähmung und sonstige Lähmungssyndrome,G,80,G,83
+G90,G99,Sonstige Krankheiten des Nervensystems,G,90,G,99
+H00,H06,"Affektionen des Augenlides, des Tränenapparates und der Orbita",H,0,H,6
+H10,H13,Affektionen der Konjunktiva,H,10,H,13
+H15,H22,"Affektionen der Sklera, der Hornhaut, der Iris und des Ziliarkörpers",H,15,H,22
+H25,H28,Affektionen der Linse,H,25,H,28
+H30,H36,Affektionen der Aderhaut und der Netzhaut,H,30,H,36
+H40,H42,Glaukom,H,40,H,42
+H43,H45,Affektionen des Glaskörpers und des Augapfels,H,43,H,45
+H46,H48,Affektionen des N. opticus und der Sehbahn,H,46,H,48
+H49,H52,"Affektionen der Augenmuskeln, Störungen der Blickbewegungen sowie Akkommodationsstörungen und Refraktionsfehler",H,49,H,52
+H53,H54,Sehstörungen und Blindheit,H,53,H,54
+H55,H59,Sonstige Affektionen des Auges und der Augenanhangsgebilde,H,55,H,59
+H60,H62,Krankheiten des äußeren Ohres,H,60,H,62
+H65,H75,Krankheiten des Mittelohres und des Warzenfortsatzes,H,65,H,75
+H80,H83,Krankheiten des Innenohres,H,80,H,83
+H90,H95,Sonstige Krankheiten des Ohres,H,90,H,95
+I00,I02,Akutes rheumatisches Fieber,I,0,I,2
+I05,I09,Chronische rheumatische Herzkrankheiten,I,5,I,9
+I10,I15,Hypertonie [Hochdruckkrankheit],I,10,I,15
+I20,I25,Ischämische Herzkrankheiten,I,20,I,25
+I26,I28,Pulmonale Herzkrankheit und Krankheiten des Lungenkreislaufes,I,26,I,28
+I30,I52,Sonstige Formen der Herzkrankheit,I,30,I,52
+I60,I69,Zerebrovaskuläre Krankheiten,I,60,I,69
+I70,I79,"Krankheiten der Arterien, Arteriolen und Kapillaren",I,70,I,79
+I80,I89,"Krankheiten der Venen, der Lymphgefäße und der Lymphknoten, anderenorts nicht klassifiziert",I,80,I,89
+I95,I99,Sonstige und nicht näher bezeichnete Krankheiten des Kreislaufsystems,I,95,I,99
+J00,J06,Akute Infektionen der oberen Atemwege,J,0,J,6
+J09,J18,Grippe und Pneumonie,J,9,J,18
+J20,J22,Sonstige akute Infektionen der unteren Atemwege,J,20,J,22
+J30,J39,Sonstige Krankheiten der oberen Atemwege,J,30,J,39
+J40,J47,Chronische Krankheiten der unteren Atemwege,J,40,J,47
+J60,J70,Lungenkrankheiten durch exogene Substanzen,J,60,J,70
+J80,J84,"Sonstige Krankheiten der Atmungsorgane, die hauptsächlich das Interstitium betreffen",J,80,J,84
+J85,J86,Purulente und nekrotisierende Krankheitszustände der unteren Atemwege,J,85,J,86
+J90,J94,Sonstige Krankheiten der Pleura,J,90,J,94
+J95,J99,Sonstige Krankheiten des Atmungssystems,J,95,J,99
+K00,K14,"Krankheiten der Mundhöhle, der Speicheldrüsen und der Kiefer",K,0,K,14
+K20,K31,"Krankheiten des Ösophagus, des Magens und des Duodenums",K,20,K,31
+K35,K38,Krankheiten der Appendix,K,35,K,38
+K40,K46,Hernien,K,40,K,46
+K50,K52,Nichtinfektiöse Enteritis und Kolitis,K,50,K,52
+K55,K64,Sonstige Krankheiten des Darmes,K,55,K,64
+K65,K67,Krankheiten des Peritoneums,K,65,K,67
+K70,K77,Krankheiten der Leber,K,70,K,77
+K80,K87,"Krankheiten der Gallenblase, der Gallenwege und des Pankreas",K,80,K,87
+K90,K93,Sonstige Krankheiten des Verdauungssystems,K,90,K,93
+L00,L08,Infektionen der Haut und der Unterhaut,L,0,L,8
+L10,L14,Bullöse Dermatosen,L,10,L,14
+L20,L30,Dermatitis und Ekzem,L,20,L,30
+L40,L45,Papulosquamöse Hautkrankheiten,L,40,L,45
+L50,L54,Urtikaria und Erythem,L,50,L,54
+L55,L59,Krankheiten der Haut und der Unterhaut durch Strahleneinwirkung,L,55,L,59
+L60,L75,Krankheiten der Hautanhangsgebilde,L,60,L,75
+L80,L99,Sonstige Krankheiten der Haut und der Unterhaut,L,80,L,99
+M00,M03,Infektiöse Arthropathien,M,0,M,3
+M05,M14,Entzündliche Polyarthropathien,M,5,M,14
+M15,M19,Arthrose,M,15,M,19
+M20,M25,Sonstige Gelenkkrankheiten,M,20,M,25
+M30,M36,Systemkrankheiten des Bindegewebes,M,30,M,36
+M40,M43,Deformitäten der Wirbelsäule und des Rückens,M,40,M,43
+M45,M49,Spondylopathien,M,45,M,49
+M50,M54,Sonstige Krankheiten der Wirbelsäule und des Rückens,M,50,M,54
+M60,M63,Krankheiten der Muskeln,M,60,M,63
+M65,M68,Krankheiten der Synovialis und der Sehnen,M,65,M,68
+M70,M79,Sonstige Krankheiten des Weichteilgewebes,M,70,M,79
+M80,M85,Veränderungen der Knochendichte und -struktur,M,80,M,85
+M86,M90,Sonstige Osteopathien,M,86,M,90
+M91,M94,Chondropathien,M,91,M,94
+M95,M99,Sonstige Krankheiten des Muskel-Skelett-Systems und des Bindegewebes,M,95,M,99
+N00,N08,Glomeruläre Krankheiten,N,0,N,8
+N10,N16,Tubulointerstitielle Nierenkrankheiten,N,10,N,16
+N17,N19,Niereninsuffizienz,N,17,N,19
+N20,N23,Urolithiasis,N,20,N,23
+N25,N29,Sonstige Krankheiten der Niere und des Ureters,N,25,N,29
+N30,N39,Sonstige Krankheiten des Harnsystems,N,30,N,39
+N40,N51,Krankheiten der männlichen Genitalorgane,N,40,N,51
+N60,N64,Krankheiten der Mamma [Brustdrüse],N,60,N,64
+N70,N77,Entzündliche Krankheiten der weiblichen Beckenorgane,N,70,N,77
+N80,N98,Nichtentzündliche Krankheiten des weiblichen Genitaltraktes,N,80,N,98
+N99,N99,Sonstige Krankheiten des Urogenitalsystems,N,99,N,99
+O00,O08,Schwangerschaft mit abortivem Ausgang,O,0,O,8
+O09,O09,Schwangerschaftsdauer,O,9,O,9
+O10,O16,"Ödeme, Proteinurie und Hypertonie während der Schwangerschaft, der Geburt und des Wochenbettes",O,10,O,16
+O20,O29,"Sonstige Krankheiten der Mutter, die vorwiegend mit der Schwangerschaft verbunden sind",O,20,O,29
+O30,O48,Betreuung der Mutter im Hinblick auf den Fetus und die Amnionhöhle sowie mögliche Entbindungskomplikationen,O,30,O,48
+O60,O75,Komplikationen bei Wehentätigkeit und Entbindung,O,60,O,75
+O80,O82,Entbindung,O,80,O,82
+O85,O92,"Komplikationen, die vorwiegend im Wochenbett auftreten",O,85,O,92
+O94,O99,"Sonstige Krankheitszustände während der Gestationsperiode, die anderenorts nicht klassifiziert sind",O,94,O,99
+P00,P04,"Schädigung des Fetus und Neugeborenen durch mütterliche Faktoren und durch Komplikationen bei Schwangerschaft, Wehentätigkeit und Entbindung",P,0,P,4
+P05,P08,Störungen im Zusammenhang mit der Schwangerschaftsdauer und dem fetalen Wachstum,P,5,P,8
+P10,P15,Geburtstrauma,P,10,P,15
+P20,P29,"Krankheiten des Atmungs- und Herz-Kreislaufsystems, die für die Perinatalperiode spezifisch sind",P,20,P,29
+P35,P39,"Infektionen, die für die Perinatalperiode spezifisch sind",P,35,P,39
+P50,P61,Hämorrhagische und hämatologische Krankheiten beim Fetus und Neugeborenen,P,50,P,61
+P70,P74,"Transitorische endokrine und Stoffwechselstörungen, die für den Fetus und das Neugeborene spezifisch sind",P,70,P,74
+P75,P78,Krankheiten des Verdauungssystems beim Fetus und Neugeborenen,P,75,P,78
+P80,P83,Krankheitszustände mit Beteiligung der Haut und der Temperaturregulation beim Fetus und Neugeborenen,P,80,P,83
+P90,P96,"Sonstige Störungen, die ihren Ursprung in der Perinatalperiode haben",P,90,P,96
+Q00,Q07,Angeborene Fehlbildungen des Nervensystems,Q,0,Q,7
+Q10,Q18,"Angeborene Fehlbildungen des Auges, des Ohres, des Gesichtes und des Halses",Q,10,Q,18
+Q20,Q28,Angeborene Fehlbildungen des Kreislaufsystems,Q,20,Q,28
+Q30,Q34,Angeborene Fehlbildungen des Atmungssystems,Q,30,Q,34
+Q35,Q37,"Lippen-, Kiefer- und Gaumenspalte",Q,35,Q,37
+Q38,Q45,Sonstige angeborene Fehlbildungen des Verdauungssystems,Q,38,Q,45
+Q50,Q56,Angeborene Fehlbildungen der Genitalorgane,Q,50,Q,56
+Q60,Q64,Angeborene Fehlbildungen des Harnsystems,Q,60,Q,64
+Q65,Q79,Angeborene Fehlbildungen und Deformitäten des Muskel-Skelett-Systems,Q,65,Q,79
+Q80,Q89,Sonstige angeborene Fehlbildungen,Q,80,Q,89
+Q90,Q99,"Chromosomenanomalien, anderenorts nicht klassifiziert",Q,90,Q,99
+R00,R09,"Symptome, die das Kreislaufsystem und das Atmungssystem betreffen",R,0,R,9
+R10,R19,"Symptome, die das Verdauungssystem und das Abdomen betreffen",R,10,R,19
+R20,R23,"Symptome, die die Haut und das Unterhautgewebe betreffen",R,20,R,23
+R25,R29,"Symptome, die das Nervensystem und das Muskel-Skelett-System betreffen",R,25,R,29
+R30,R39,"Symptome, die das Harnsystem betreffen",R,30,R,39
+R40,R46,"Symptome, die das Erkennungs- und Wahrnehmungsvermögen, die Stimmung und das Verhalten betreffen",R,40,R,46
+R47,R49,"Symptome, die die Sprache und die Stimme betreffen",R,47,R,49
+R50,R69,Allgemeinsymptome,R,50,R,69
+R70,R79,Abnorme Blutuntersuchungsbefunde ohne Vorliegen einer Diagnose,R,70,R,79
+R80,R82,Abnorme Urinuntersuchungsbefunde ohne Vorliegen einer Diagnose,R,80,R,82
+R83,R89,"Abnorme Befunde ohne Vorliegen einer Diagnose bei der Untersuchung anderer Körperflüssigkeiten, Substanzen und Gewebe",R,83,R,89
+R90,R94,Abnorme Befunde ohne Vorliegen einer Diagnose bei bildgebender Diagnostik und Funktionsprüfungen,R,90,R,94
+R95,R99,Ungenau bezeichnete und unbekannte Todesursachen,R,95,R,99
+S00,S09,Verletzungen des Kopfes,S,0,S,9
+S10,S19,Verletzungen des Halses,S,10,S,19
+S20,S29,Verletzungen des Thorax,S,20,S,29
+S30,S39,"Verletzungen des Abdomens, der Lumbosakralgegend, der Lendenwirbelsäule und des Beckens",S,30,S,39
+S40,S49,Verletzungen der Schulter und des Oberarmes,S,40,S,49
+S50,S59,Verletzungen des Ellenbogens und des Unterarmes,S,50,S,59
+S60,S69,Verletzungen des Handgelenkes und der Hand,S,60,S,69
+S70,S79,Verletzungen der Hüfte und des Oberschenkels,S,70,S,79
+S80,S89,Verletzungen des Knies und des Unterschenkels,S,80,S,89
+S90,S99,Verletzungen der Knöchelregion und des Fußes,S,90,S,99
+T00,T07,Verletzungen mit Beteiligung mehrerer Körperregionen,T,0,T,7
+T08,T14,"Verletzungen nicht näher bezeichneter Teile des Rumpfes, der Extremitäten oder anderer Körperregionen",T,8,T,14
+T15,T19,Folgen des Eindringens eines Fremdkörpers durch eine natürliche Körperöffnung,T,15,T,19
+T20,T25,"Verbrennungen oder Verätzungen der äußeren Körperoberfläche, Lokalisation bezeichnet",T,20,T,25
+T26,T28,"Verbrennungen oder Verätzungen, die auf das Auge und auf innere Organe begrenzt sind",T,26,T,28
+T29,T32,Verbrennungen oder Verätzungen mehrerer und nicht näher bezeichneter Körperregionen,T,29,T,32
+T33,T35,Erfrierungen,T,33,T,35
+T36,T50,"Vergiftungen durch Arzneimittel, Drogen und biologisch aktive Substanzen",T,36,T,50
+T51,T65,Toxische Wirkungen von vorwiegend nicht medizinisch verwendeten Substanzen,T,51,T,65
+T66,T78,Sonstige und nicht näher bezeichnete Schäden durch äußere Ursachen,T,66,T,78
+T79,T79,Bestimmte Frühkomplikationen eines Traumas,T,79,T,79
+T80,T88,"Komplikationen bei chirurgischen Eingriffen und medizinischer Behandlung, anderenorts nicht klassifiziert",T,80,T,88
+T89,T89,"Sonstige Komplikationen eines Traumas, anderenorts nicht klassifiziert",T,89,T,89
+T90,T98,"Folgen von Verletzungen, Vergiftungen und sonstigen Auswirkungen äußerer Ursachen",T,90,T,98
+V01,X59,Unfälle,V,1,X,59
+X60,X84,Vorsätzliche Selbstbeschädigung,X,60,X,84
+X85,Y09,Tätlicher Angriff,X,85,Y,9
+Y10,Y34,"Ereignis, dessen nähere Umstände unbestimmt sind",Y,10,Y,34
+Y35,Y36,Gesetzliche Maßnahmen und Kriegshandlungen,Y,35,Y,36
+Y40,Y84,Komplikationen bei der medizinischen und chirurgischen Behandlung,Y,40,Y,84
+Z00,Z13,"Personen, die das Gesundheitswesen zur Untersuchung und Abklärung in Anspruch nehmen",Z,0,Z,13
+Z20,Z29,Personen mit potentiellen Gesundheitsrisiken hinsichtlich übertragbarer Krankheiten,Z,20,Z,29
+Z30,Z39,"Personen, die das Gesundheitswesen im Zusammenhang mit Problemen der Reproduktion in Anspruch nehmen",Z,30,Z,39
+Z40,Z54,"Personen, die das Gesundheitswesen zum Zwecke spezifischer Maßnahmen und zur medizinischen Betreuung in Anspruch nehmen",Z,40,Z,54
+Z55,Z65,Personen mit potentiellen Gesundheitsrisiken aufgrund sozioökonomischer oder psychosozialer Umstände,Z,55,Z,65
+Z70,Z76,"Personen, die das Gesundheitswesen aus sonstigen Gründen in Anspruch nehmen",Z,70,Z,76
+Z80,Z99,"Personen mit potentiellen Gesundheitsrisiken aufgrund der Familien- oder Eigenanamnese und bestimmte Zustände, die den Gesundheitszustand beeinflussen",Z,80,Z,99
+U00,U49,Vorläufige Zuordnungen für Krankheiten mit unklarer Ätiologie und nicht belegte Schlüsselnummern,U,0,U,49
+U50,U52,Funktionseinschränkung,U,50,U,52
+U55,U55,Erfolgte Registrierung zur Organtransplantation,U,55,U,55
+U60,U61,Stadieneinteilung der HIV-Infektion,U,60,U,61
+U69,U69,Sonstige sekundäre Schlüsselnummern für besondere Zwecke,U,69,U,69
+U80,U85,Infektionserreger mit Resistenzen gegen bestimmte Antibiotika oder Chemotherapeutika,U,80,U,85
+U99,U99,Nicht belegte und belegte Schlüsselnummern,U,99,U,99

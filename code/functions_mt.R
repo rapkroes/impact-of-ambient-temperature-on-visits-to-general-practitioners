@@ -82,3 +82,8 @@ TG_DateNum2year<- function(tgdatenumvec){
   out<- as.factor(isoyear(TG_DateNum2date(tgdatenumvec)))
 }
 
+date2TG_DateNum<- function(date) {
+  #transforms a date (yyyy-mm-dd) into a Matlab Serial time code (like TG_DateNum)
+  as.numeric(as.Date(date)) +719528
+}
+

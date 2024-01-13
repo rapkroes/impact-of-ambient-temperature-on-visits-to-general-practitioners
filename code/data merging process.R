@@ -13,7 +13,9 @@ for(i in seq_along(location.name)){
 
 #daylight data
 for(i in seq_along(location.name)){
-  url_string<- paste0("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/weather%20data/wetter%20",location.name[i],".csv")
+  url_string<- paste0("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/daylight%20hours%20data/daylight_",location.name[i],".csv")
   im<- read.csv(url_string)
   assign(paste0("wetter_",location.name[i]),im)
 }
+
+

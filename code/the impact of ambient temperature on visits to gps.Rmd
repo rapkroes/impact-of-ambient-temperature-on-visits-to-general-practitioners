@@ -15,10 +15,13 @@ library(lubridate)
 library(dplyr)
 ```
 ```{r}
+#read file with functions
+source("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/code/functions_mt.R")
 
 #read in auxiliary data files
 ListeKrankenkassen<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/ListeKrankenkassen_up.csv")
 classification.matrix<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/classification.csv")
+icd10_blocks<- read.csv()
 
 fake.data<- TRUE
 if(fake.data){
