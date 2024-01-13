@@ -1,5 +1,13 @@
 ###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###
 
 ###load the rest of the (publicly available) data
+
+location.name<- c("aalen","ammerbuch","baiersbronn","boeblingen","boennigheim","pforzheim","pleidelsheim","salach","schluchsee","schopfheim","schwaebisch gmuend","waldachtal","wendlingen")
+
 #weather data
-wetter_aalen<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/blob/5380bbfc9a623191de5e8f963d87cfb799d48932/weather%20data/wetter%20aalen.csv")
+wetter_aalen<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/weather%20data/wetter%20aalen.csv")
+for(i in seq_along(location.name)){
+  url_string<- paste0("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/weather%20data/wetter%20",location.name[i],".csv")
+  im<- read.csv(url_string)
+  assign(paste0("wetter_",location.name[i]),im)
+}
