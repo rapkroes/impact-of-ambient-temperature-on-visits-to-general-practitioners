@@ -22,7 +22,7 @@ source("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-g
 ListeKrankenkassen<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/ListeKrankenkassen_up.csv")
 classification.matrix<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/classification.csv")
 icd10_blocks<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/icd10_blocks.csv")
-location_information<- read.csv()
+location_information<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/location%20information.csv", encoding = "Latin-1")
 
 fake.data<- TRUE
 if(fake.data){
