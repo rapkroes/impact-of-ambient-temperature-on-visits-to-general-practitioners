@@ -1,6 +1,7 @@
 ###Fake Data Generation Process###
 
 art.data<- function(n){
+  browser()
   #creates a list of data frames with n entries, with entries trying to emulate the original data sets. 
   ID.levels<- seq(1,n/4)
   earliest.date<- date2TG_DateNum("2016-01-01")

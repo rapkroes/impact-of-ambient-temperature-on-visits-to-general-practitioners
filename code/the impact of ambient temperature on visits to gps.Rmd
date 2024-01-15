@@ -18,10 +18,11 @@ library(dplyr)
 #read file with functions
 source("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/code/functions_mt.R")
 
-#read in auxiliary data files
+#read auxiliary data files
 ListeKrankenkassen<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/ListeKrankenkassen_up.csv")
 classification.matrix<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/classification.csv")
-icd10_blocks<- read.csv()
+icd10_blocks<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/icd10_blocks.csv")
+location_information<- read.csv()
 
 fake.data<- TRUE
 if(fake.data){
@@ -59,6 +60,8 @@ full.df$PraxisID<- as.factor(full.df$PraxisID)
 location.name<- c("aalen","ammerbuch","baiersbronn","boeblingen","boennigheim","pforzheim","pleidelsheim","salach","schluchsee","schopfheim","schwaebisch gmuend","waldachtal","wendlingen")
 latitude<- c(48.8,48.6,48.5,48.7,49,48.9,49,48.7,47.8,47.7,48.8,48.5,48.7)
 longitude<- c(10.1,9,8.4,9,9.1,8.7,9.2,9.7,8.2,7.8,9.8,8.6,9.4)
+write.csv(cbind(location.name,latitude,longitude),"location information.csv")
+getwd()
 ```
 
 
