@@ -87,3 +87,211 @@ date2TG_DateNum<- function(date) {
   as.numeric(as.Date(date)) +719528
 }
 
+chunk.data<- function(df,  no.splits){
+  # splits a data frame into several data frames. They are returned as a list. The data is split by the uniPatID variable.
+  # no.splits is the number in how many separate data frames the original data frame df is split.
+  v<- as.factor(df$uniPatID)
+  v_2<- levels(v)
+  l<- length(v_2)
+  
+  f<- ceiling(l/no.splits)
+  allocation<- rep(seq(1,no.splits),f)[1:l]
+  
+  out<- list()
+  for (i in seq(1,no.splits)) {
+    out[[i]]<- df[v %in% v_2[allocation==i],]
+  }
+  return(out)
+}
+
+chunk.adddata<- function(chunkeddl, adddata){
+  #Takes the result of the chunk.data-function and another dataset and chunks the other dataset in the same way as the chunked dataset.
+  l<- length(chunkeddl)
+  adddata$uniPatID<- as.character(adddata$uniPatID)
+  chunked.adddata<- list()
+  for(i in seq(1,l)){
+    ids<- as.character(chunkeddl[[i]]$uniPatID)
+    chunked.adddata[[i]]<- adddata|>
+      filter(uniPatID %in% ids)
+  }
+  return(chunked.adddata)
+}
+
+add.stamm.new.par<- function(edf,sdf, no.splits,no.workers){
+  #parallelised version of add.stamm.new
+  dl_e<- chunk.data(edf,no.splits)
+  dl_stamm<- chunk.adddata(dl_e,sdf)
+  par.cl<- makeCluster(no.workers)
+  dist.env<- environment()
+  clusterExport(par.cl,varlist = c("dl_e","dl_stamm","filter","arrange"), envir = dist.env)
+  
+  result<- parLapply(par.cl,1:no.splits,function(k){
+    episodedf<- dl_e[[k]]
+    stamm<- dl_stamm[[k]]
+    n<- nrow(episodedf)
+    im<- as.data.frame(matrix(NA,nrow = n, ncol = ncol(stamm)))
+    colnames(im)<- colnames(stamm)
+    stamm.is.there<- numeric(n)
+    for(i in seq(1,n)){
+      pat<- episodedf$uniPatID[i]
+      start_date<- episodedf$start_date[i]
+      patient.stamm<- stamm|>
+        filter(uniPatID==pat)|>
+        arrange(TG_DateNum)
+      if(nrow(patient.stamm)==1){
+        stamm.is.there[i]<- 1
+        im[i,]<- patient.stamm
+      }else if(nrow(patient.stamm)>1){
+        stamm.is.there[i]<- 1
+        before.episode.start<- patient.stamm$TG_DateNum<=start_date
+        if(all(before.episode.start)){
+          im[i,]<- patient.stamm[nrow(patient.stamm),]
+        }else if(!all(before.episode.start)){
+          im[i,]<- patient.stamm[1,]
+        }else{
+          im[i,]<- patient.stamm[max(which(before.episode.start)),]
+        }
+      }
+    }
+    col.selector<- colnames(im)!="uniPatID" & colnames(im)!="TG_DateNum"
+    im<- im[,col.selector]
+    out<- cbind(episodedf,im,stamm.is.there)
+    colnames(out)<- c(colnames(episodedf),colnames(im),"stamm.is.there")
+    
+    return(out)
+  })
+  out<- as.data.frame(matrix(NA, nrow = nrow(edf), ncol = length(colnames(result[[1]]))))
+  colnames(out)<- colnames(result[[1]])
+  ticker<- 1
+  for(j in seq(1,length(result))){
+    out[seq(ticker,ticker-1+nrow(result[[j]])),]<- result[[j]]
+    ticker<- ticker+nrow(result[[j]])
+  }
+  return(out)
+}
+
+add.konsul<- function(edf,sdf, no.splits,no.workers){
+  #slightly adjusted version of add.stamm.new.par
+  dl_e<- chunk.data(edf,no.splits)
+  dl_stamm<- chunk.adddata(dl_e,sdf)
+  par.cl<- makeCluster(no.workers)
+  dist.env<- environment()
+  clusterExport(par.cl,varlist = c("dl_e","dl_stamm","filter","arrange"), envir = dist.env)
+  
+  result<- parLapply(par.cl,1:no.splits,function(k){
+    episodedf<- dl_e[[k]]
+    stamm<- dl_stamm[[k]]
+    n<- nrow(episodedf)
+    im<- as.data.frame(matrix(NA,nrow = n, ncol = ncol(stamm)))
+    colnames(im)<- colnames(stamm)
+    stamm.is.there<- numeric(n)
+    for(i in seq(1,n)){
+      pat<- episodedf$uniPatID[i]
+      start_date<- episodedf$start_date[i]
+      patient.stamm<- stamm|>
+        filter(uniPatID==pat)|>
+        arrange(TG_DateNum)
+      if(nrow(patient.stamm)==1){
+        stamm.is.there[i]<- 1
+        im[i,]<- patient.stamm
+      }else if(nrow(patient.stamm)>1){
+        stamm.is.there[i]<- 1
+        before.episode.start<- patient.stamm$TG_DateNum<=start_date
+        if(all(before.episode.start)){
+          im[i,]<- patient.stamm[nrow(patient.stamm),]
+        }else if(!all(before.episode.start)){
+          im[i,]<- patient.stamm[1,]
+        }else{
+          im[i,]<- patient.stamm[max(which(before.episode.start)),]
+        }
+      }
+    }
+    col.selector<- colnames(im)!="uniPatID" & colnames(im)!="TG_DateNum"
+    im<- im[,col.selector]
+    out<- cbind(episodedf,im,stamm.is.there)
+    colnames(out)<- c(colnames(episodedf),colnames(im),"konsul.is.there")
+    
+    return(out)
+  })
+  out<- as.data.frame(matrix(NA, nrow = nrow(edf), ncol = length(colnames(result[[1]]))))
+  colnames(out)<- colnames(result[[1]])
+  ticker<- 1
+  for(j in seq(1,length(result))){
+    out[seq(ticker,ticker-1+nrow(result[[j]])),]<- result[[j]]
+    ticker<- ticker+nrow(result[[j]])
+  }
+  return(out)
+}
+
+praxisID2location<- function(praxisID){
+  l<- length(praxisID)
+  out<- numeric(length = l)
+  for(i in seq_along(praxisID)){
+    if(praxisID[i]==1 | praxisID[i]==2){
+      out[i]<- "baiersbronn"
+    }else if(praxisID[i]==3){
+      out[i]<- "aalen"
+    }else if(praxisID[i]==4){
+      out[i]<- "waldachtal"
+    }else if(praxisID[i]==5){
+      out[i]<- "boeblingen"
+    }else if(praxisID[i]==6){
+      out[i]<- "schluchsee"
+    }else if(praxisID[i]==8){
+      out[i]<- "wendlingen"
+    }
+  }
+  return(out)
+}
+
+praxisID2location_id<- function(praxisID){
+  l<- length(praxisID)
+  out<- numeric(length = l)
+  for(i in seq_along(praxisID)){
+    if(praxisID[i]==1 | praxisID[i]==2){
+      out[i]<- 8237
+    }else if(praxisID[i]==3){
+      out[i]<- 8136
+    }else if(praxisID[i]==4){
+      out[i]<- 8237
+    }else if(praxisID[i]==5){
+      out[i]<- 8115
+    }else if(praxisID[i]==6){
+      out[i]<- 8315
+    }else if(praxisID[i]==8){
+      out[i]<- 8116
+    }
+  }
+  return(out)
+}
+
+add.weather<- function(fdf, locationvec, no.workers){
+  praxes<- as.numeric(levels(as.factor(fdf$PraxisID)))
+  fdl<- list()
+  for(i in seq_along(praxes)){
+    fdl[[i]]<- fdf|>
+      filter(PraxisID==praxes[i])
+  }
+  wdl<- list()
+  wdf.names<- paste0("wetter_",praxisID2location(praxes))
+  for(i in seq_along(praxes)){
+    wdl[[i]]<- get(wdf.names, envir = .GlobalEnv)
+  }
+  
+  wcl<- makeCluster(no.workers)
+  dist.env<- environment()
+  clusterExport(wcl, varlist = c("fdl","wdl"), envir = dist.env)
+  result<- parLapply(wcl,seq_along(praxes),fun = function(k){
+    fdf_loc<- fdl[[k]]
+    wdf<- wdl[[k]]
+    
+  })
+  
+}
+
+ThomsDiscomfortIndex<- function(PraxisID, TG_DateNum){
+  wdf<- get(paste0("wetter_",praxisID2location(PraxisID)))|>
+    filter(TG_DateNum==TG_DateNum)
+  
+  
+}

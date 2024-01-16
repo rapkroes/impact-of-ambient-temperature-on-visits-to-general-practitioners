@@ -13,16 +13,40 @@ library(devtools)
 library(readxl)
 library(lubridate)
 library(dplyr)
+library(parallel)
 ```
 ```{r}
 #read file with functions
 source("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/code/functions_mt.R")
 
+#lacation data
+location_information<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/location%20information.csv", header = TRUE, encoding = "Latin-1")
+location.name<- location_information$location.name
+
+#weather data
+for(i in seq_along(location.name)){
+  url_string<- paste0("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/weather%20data/wetter%20",location.name[i],".csv")
+  im<- read.csv(url_string)
+  im$TG_DateNum<- date2TG_DateNum(im$time)
+  assign(paste0("wetter_",location.name[i]),im)
+}
+
+#daylight data
+for(i in seq_along(location.name)){
+  url_string<- paste0("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/daylight%20hours%20data/daylight_",location.name[i],".csv")
+  im<- read.csv(url_string, header = TRUE)
+  assign(paste0("daylight_",location.name[i]),im)
+}
+
+#Covid-19 data
+covid.data<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/COVID-19-Faelle_7-Tage-Inzidenz_Landkreise.csv")
+
 #read auxiliary data files
 ListeKrankenkassen<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/ListeKrankenkassen_up.csv")
 classification.matrix<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/classification.csv")
 icd10_blocks<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/icd10_blocks.csv")
-location_information<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/location%20information.csv", encoding = "Latin-1")
+
+
 
 fake.data<- TRUE
 if(fake.data){

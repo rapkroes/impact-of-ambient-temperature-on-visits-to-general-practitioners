@@ -1,22 +1,20 @@
 ###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###Data Merging Process###
 
-###load the rest of the (publicly available) data
+# 1. Use Diag3 as baseline
+# 2. add Stamm3 data
+# 3. add Konsul3 data
+# 4. add weather data
+# 5. add daylight data
+# 6. add Covid-19 data
 
-location.name<- c("aalen","ammerbuch","baiersbronn","boeblingen","boennigheim","pforzheim","pleidelsheim","salach","schluchsee","schopfheim","schwaebisch_gmuend","waldachtal","wendlingen")
+# 1
+fulldf_1<- Diag3
 
-#weather data
-for(i in seq_along(location.name)){
-  url_string<- paste0("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/weather%20data/wetter%20",location.name[i],".csv")
-  im<- read.csv(url_string)
-  assign(paste0("wetter_",location.name[i]),im)
-}
+# 2
+fulldf_2<- add.stamm.new.par(fulldf_1, Stamm3, 50, 2)
 
-#daylight data
-for(i in seq_along(location.name)){
-  url_string<- paste0("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/daylight%20hours%20data/daylight_",location.name[i],".csv")
-  im<- read.csv(url_string)
-  assign(paste0("daylight_",location.name[i]),im)
-}
+# 3
+fulldf_3<- add.konsul(fulldf_2, Konsul3, 50, 2)
 
-#Covid data
-
+# 4
+fulldf_4<- add.weather(fulldf_3, location_information)
