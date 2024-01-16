@@ -292,6 +292,6 @@ add.weather<- function(fdf, locationvec, no.workers){
 ThomsDiscomfortIndex<- function(PraxisID, TG_DateNum){
   wdf<- get(paste0("wetter_",praxisID2location(PraxisID)))|>
     filter(TG_DateNum==TG_DateNum)
-  
+  wetter_aalen$temperature_2m_mean..Â.C.
   
 }
