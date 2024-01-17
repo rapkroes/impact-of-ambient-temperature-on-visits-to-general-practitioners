@@ -289,9 +289,37 @@ add.weather<- function(fdf, locationvec, no.workers){
   
 }
 
-ThomsDiscomfortIndex<- function(PraxisID, TG_DateNum){
+ThomsDiscomfortIndex<- function(PraxisID, date){
   wdf<- get(paste0("wetter_",praxisID2location(PraxisID)))|>
-    filter(TG_DateNum==TG_DateNum)
-  wetter_aalen$temperature_2m_mean..Â.C.
+    filter(TG_DateNum==date)
+  out<- mean(wdf$temperature_kelvin)-273.16-0.55*(1-0.01*mean(wdf$relative_humidity))*(mean(wdf$temperature_kelvin)-273.16-14.5)
+  return(out)
+}
+
+weatherdata2heatwave<- function(wdf, sel.quantile=NA, sel.temperature_kelvin=NA, loc){
+  if(is.na(sel.quantile)$is.na(sel.temperature_kelvin)) stop("Either sel.quantile or sel.temperature has to be a numeric number. The other one has to be NA.")
+  daily.mean.temperature_kelvin<- colMeans(matrix(wdf$temperature_kelvin, nrow = 24))
+  daily.mean.relative.humidity<- colMeans(matrix(wdf$relative_humidity, nrow = 24))
+  dates<- unique(wdf$TG_DateNum)
+  length.heatwave<- numeric(length = length(dates))
+  if(is.na(sel.temperature)){
+    threshold<- quantile(daily.mean.temperature_kelvin, probs=sel.quantile)
+    above.threshold<- daily.mean.temperature_kelvin>=threshold
+  }else{
+    above.threshold<- daily.mean.temperature_kelvin>=sel.temperature_kelvin
+  }
+  
+  above.threshold<- as.numeric(above.threshold)
+  for(i in seq_along(length.heatwave)){
+    if(above.threshold[i]==1){
+      length.heatwave[i]<- length.heatwave[i-1]+1
+    }
+  }
+  out<- as.data.frame(cbind(dates,daily.mean.temperature_kelvin,daily.mean.relative.humidity, length.heatwave))
+  colnames(out)<- c("TG_DateNum", "daily_mean_temperature_kelvin", "daily_mean_relative_humidity", "length_heatwave")
+  assign(paste0("heatwave",loc),out)
+}
+
+SuggestedDiscomfortIndex<- function(date,loc,w,theta,rho,tau){
   
 }

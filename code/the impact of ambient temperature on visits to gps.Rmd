@@ -27,7 +27,19 @@ location.name<- location_information$location.name
 for(i in seq_along(location.name)){
   url_string<- paste0("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/weather%20data/wetter%20",location.name[i],".csv")
   im<- read.csv(url_string)
+  colnames(im)<- c("time", "temperature_celsius", "relative_humidity", "dew_point", "apparent_temperature_celsius", "precipitation", "rain", "snow_fall", "snow_depth", "surface_pressure")
+  
+  
+  #filter out the correct dates, elsewise the averages get screwed (seasonality of data)
+  
+  
+  
+  #unit transformations
   im$TG_DateNum<- date2TG_DateNum(im$time)
+  im<- im|>
+    filter(TG_DateNum<739171)
+  im$temperature_kelvin<- im$temperature_celsius +273.16
+  
   assign(paste0("wetter_",location.name[i]),im)
 }
 
