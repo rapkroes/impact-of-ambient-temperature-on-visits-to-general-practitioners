@@ -19,7 +19,7 @@ library(parallel)
 #read file with functions
 source("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/code/functions_mt.R")
 
-#lacation data
+#location data
 location_information<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/location%20information.csv", header = TRUE, encoding = "Latin-1")
 location.name<- location_information$location.name
 

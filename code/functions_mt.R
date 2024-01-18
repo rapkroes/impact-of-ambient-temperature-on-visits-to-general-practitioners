@@ -117,6 +117,18 @@ chunk.adddata<- function(chunkeddl, adddata){
   return(chunked.adddata)
 }
 
+chronic.transformation<- function(diagdf){
+  #removes all chronic observations and eaves only non-chronic observations. Chronic observations are reintroduced as patient-specific data.
+  chronic.entry<- grepl("DD",diagdf$icd10)
+  category<- icd10.to.class(diagdf$icd10)
+  all.patients<- unique(diagdf$uniPatID)
+  chronic.category.matrix<- matrix(0,nrow = length(all.patients), ncol = 11)
+  only.dd<- cbind(diagdf,category)[chronic.entry,]
+  for(i in seq(1,nrow(only.dd))){
+    
+  }
+}
+
 add.stamm.new.par<- function(edf,sdf, no.splits,no.workers){
   #parallelised version of add.stamm.new
   dl_e<- chunk.data(edf,no.splits)
@@ -273,7 +285,7 @@ add.weather<- function(fdf, locationvec, no.workers){
       filter(PraxisID==praxes[i])
   }
   wdl<- list()
-  wdf.names<- paste0("wetter_",praxisID2location(praxes))
+  wdf.names<- paste0("heatwave_",praxisID2location(praxes))
   for(i in seq_along(praxes)){
     wdl[[i]]<- get(wdf.names, envir = .GlobalEnv)
   }
@@ -284,9 +296,21 @@ add.weather<- function(fdf, locationvec, no.workers){
   result<- parLapply(wcl,seq_along(praxes),fun = function(k){
     fdf_loc<- fdl[[k]]
     wdf<- wdl[[k]]
-    
+    all.dates<- unique(fdf_loc$TG_DateNum)
+    addage<- as.data.frame(matrix(NA,nrow = nrow(fdf_loc), ncol = 3))
+    for(i in seq_along(all.dates)){
+      row.selector<- fdf_loc$TG_DateNum==all.dates[i]
+      addage[row.selector,]<- wdf[wdf$TG_DateNum==all.dates[i],2:4]
+    }
+    colnames(addage)<- c("daily_mean_temperature_kelvin", "daily_mean_relative_humidity", "length_heatwave")
+    out<- cbind(fdf_loc, addage)
+    return(out)
   })
-  
+  out<- result[[1]]
+  for(i in seq(2,length(praxes))){
+    out<- rbind(out,result[[i]])
+  }
+  return(out)
 }
 
 ThomsDiscomfortIndex<- function(PraxisID, date){
