@@ -103,8 +103,6 @@ gender.selector<- full.df_1$Weibl==1 | full.df_1$Maennl==1 | full.df_1$stamm.is.
 full.df_1$female<- full.df_1$Weibl
 full.df_1.2<- full.df_1[gender.selector,]|>
   select(-Weibl,-Maennl,-Transgen,-Divers,-Geschlundef)
-# create factor variable of PraxisID
-full.df_1.2$PraxisID<- as.factor(full.df_1$PraxisID)
 #add PKV (private health insurance) dummy
 full.df_1.2$PKV<- IK2PKV(full.df_1$IK)
 
@@ -123,6 +121,8 @@ full.df_3$age<- TG_DateNum2year(full.df_3$TG_DateNum)-full.df_3$Geburtsjahr
 ### covid-19
 full.df_4<- full.df_3
 full.df_4$landkreis_id<- praxis_id2landkreis_id(full.df_4$PraxisID)
+
+
 ```
 
 ```{r}
