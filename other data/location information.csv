@@ -1,14 +1,14 @@
-location.name,latitude,longitude,klarname,landkreis,landkreis_id
-aalen,48.8,10.1,Aalen, Ostalbkreis,8136
-ammerbuch,48.6,9,Ammerbuch, Tübingen,8416
-baiersbronn,48.5,8.4,Baiersbronn, Freudenstadt,8237
-boeblingen,48.7,9,Böblingen, Böblingen,8115
-boennigheim,49,9.1,Bönnigheim, Ludwigsburg,8118
-pforzheim,48.9,8.7,Pforzheim, Pforzheim,8231
-pleidelsheim,49,9.2,Pleidelsheim, Ludwigsburg,8118
-salach,48.7,9.7,Salach, Göppingen,8117
-schluchsee,47.8,8.2,Schluchsee, Breisgau-Hochschwarzwald,8315
-schopfheim,47.7,7.8,Schopfheim, Lörrach,8336
-schwaebisch_gmuend,48.8,9.8,Schwäbisch Gmünd, Ostalbkreis,8136
-waldachtal,48.5,8.6,Waldachtal, Freudenstadt,8237
-wendlingen,48.7,9.4,Wendlingen am Neckar, Esslingen,8116
+location.name,latitude,longitude,klarname,landkreis,landkreis_id,praxis_ids
+aalen,48.8,10.1,Aalen, Ostalbkreis,8136,3
+ammerbuch,48.6,9,Ammerbuch, Tübingen,8416,
+baiersbronn,48.5,8.4,Baiersbronn, Freudenstadt,8237,"1,2"
+boeblingen,48.7,9,Böblingen, Böblingen,8115,5
+boennigheim,49,9.1,Bönnigheim, Ludwigsburg,8118,
+pforzheim,48.9,8.7,Pforzheim, Pforzheim,8231,
+pleidelsheim,49,9.2,Pleidelsheim, Ludwigsburg,8118,
+salach,48.7,9.7,Salach, Göppingen,8117,
+schluchsee,47.8,8.2,Schluchsee, Breisgau-Hochschwarzwald,8315,
+schopfheim,47.7,7.8,Schopfheim, Lörrach,8336,6
+schwaebisch_gmuend,48.8,9.8,Schwäbisch Gmünd, Ostalbkreis,8136,
+waldachtal,48.5,8.6,Waldachtal, Freudenstadt,8237,4
+wendlingen,48.7,9.4,Wendlingen am Neckar, Esslingen,8116,8

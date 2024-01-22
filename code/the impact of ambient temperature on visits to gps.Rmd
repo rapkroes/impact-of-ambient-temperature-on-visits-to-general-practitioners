@@ -8,7 +8,6 @@ output: html_document
 This is the main Markdown file for the data analysis of 'Impact of Ambient Temperature on Visits to General Practitioners' by Raphael Kroes.
 The original data cannot be provided publicly because of data protection reasons. However, a fake dataset is provided, which can be used to test the code.
 ```{r}
-rm(list = ls())
 library(devtools)
 library(readxl)
 library(lubridate)
@@ -25,6 +24,7 @@ source("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-g
 ListeKrankenkassen<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/ListeKrankenkassen_up.csv")
 classification.matrix<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/classification.csv")
 icd10_blocks<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/icd10_blocks.csv")
+holidays<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/numeric_holidays.csv")
 
 fake.data<- TRUE
 if(fake.data){
@@ -53,10 +53,9 @@ for(i in seq_along(location.name)){
   im$temperature_kelvin<- im$temperature_celsius +273.16
   
   assign(paste0("wetter_",location.name[i]),im)
-  weatherdata.transformation(im,sel.quantile = .95, loc = location.name[i])
+  weatherdata.transformation(im,sel.quantile = .95, loc = location.name[i], dr = date.range)
 }
 
-#weatherdata.transformation(wetter_aalen,sel.quantile = .95, loc = location.name[1], dr = date.range)
 
 
 #daylight data
@@ -65,7 +64,7 @@ for(i in seq_along(location.name)){
   im<- read.csv(url_string, header = TRUE)
   
   #unit transformations
-  im$TG_DateNum<- date2TG_DateNum(im$time)
+  #im$TG_DateNum<- date2TG_DateNum(im$time)
   im<- im|>
     filter(TG_DateNum>=date.range[1] & TG_DateNum<=date.range[2])
   assign(paste0("daylight_",location.name[i]),im)
@@ -88,21 +87,39 @@ View(Diag3[as.logical(suspicious.Diag.entries(Diag3$icd10)),])
 
 Stamm and Konsul must be merged to Diag, and the resulting data frame must be cleared.
 ```{r}
-full.df
-
-# find chronic diseases
-chronic.df<- as.data.frame(cbind(Diag3$uniPatID,Diag3$icd10)[Diag3$DiagTyp=="DD",])
+### chronic diseases
+chronic.sel<- grepl("DD",Diag3$DiagTyp)
+chronic.df<- as.data.frame(cbind(Diag3$uniPatID,Diag3$icd10)[chronic.sel,])|>
+  distinct()
 colnames(chronic.df)<- c("uniPatID", "diag_category")
 chronic.df$diag_category<- icd10.to.class(chronic.df$diag_category)
+full.df_1<- add.chronic(Diag3[!chronic.sel,], chronic.df)
 
+
+### stamm data
+full.df_1<- add.stamm.new.par(Diag3,Stamm3,no.splits = 50, no.workers = 2)
 # gender variable
-gender.selector<- full.df$Weibl==1 | full.df$Maennl==1 | full.df$stamm.is.there==0
-full.df$female<- full.df$Weibl[gender.selector]
-full.df<- full.df[gender.selector,]|>
-  select(-Weibl,-Maennl,-Trangen,-Divers,-Geschlundef)
+gender.selector<- full.df_1$Weibl==1 | full.df_1$Maennl==1 | full.df_1$stamm.is.there==0
+full.df_1$female<- full.df_1$Weibl
+full.df_1.2<- full.df_1[gender.selector,]|>
+  select(-Weibl,-Maennl,-Transgen,-Divers,-Geschlundef)
+# create factor variable of PraxisID
+full.df_1.2$PraxisID<- as.factor(full.df_1$PraxisID)
+#add PKV (private health insurance) dummy
+full.df_1.2$PKV<- IK2PKV(full.df_1$IK)
 
-# last step: create factor variable of PraxisID
-full.df$PraxisID<- as.factor(full.df$PraxisID)
+### konsul
+full.df_2<- add.konsul(full.df_1.2, Konsul3, no.splits = 50, no.workers = 2)
+
+### time
+full.df_3<- full.df_2
+full.df_3$dow<- as.factor(TG_DateNum2dow(full.df_3$TG_DateNum))
+full.df_3<- cbind(full.df_3,TG_DateNum2holiday(full.df_3$TG_DateNum))
+full.df_3$week<- as.factor(TG_DateNum2week(full.df_3$TG_DateNum))
+full.df_3$month<- as.factor(TG_DateNum2month(full.df_3$TG_DateNum))
+full.df_3$year<- as.factor(TG_DateNum2year(full.df_3$TG_DateNum))
+full.df_3$age<- TG_DateNum2year(full.df_3$TG_DateNum)-full.df_3$Geburtsjahr
+
 ```
 
 ```{r}

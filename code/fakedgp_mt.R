@@ -11,7 +11,7 @@ art.data<- function(n){
     PatID= NA,
     TG_DateNum= sample(date.vec,n/4, replace = TRUE),
     index_i=NA,
-    PraxisID=NA,
+    PraxisID=sample(c(1:6,8),n/4, replace = TRUE),
     PLZ= as.factor(sample(1:10,n/4,replace = TRUE)),
     Entfernung=NA,
     Geburtsjahr= sample(1920:2010,n/4,replace = TRUE),

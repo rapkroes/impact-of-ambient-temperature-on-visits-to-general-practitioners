@@ -79,12 +79,44 @@ TG_DateNum2month<- function(tgdatenumvec){
 
 TG_DateNum2year<- function(tgdatenumvec){
   #takes a vector of TG_DateNum dates and returns them as their respective month as ordered factor variable
-  out<- as.factor(isoyear(TG_DateNum2date(tgdatenumvec)))
+  out<- isoyear(TG_DateNum2date(tgdatenumvec))
 }
 
 date2TG_DateNum<- function(date) {
   #transforms a date (yyyy-mm-dd) into a Matlab Serial time code (like TG_DateNum)
   as.numeric(as.Date(date)) +719528
+}
+
+TG_DateNum2holiday<- function(tgdatenumvec){
+  #transforms a vector of TG_DateNum dates to a data frame with two dummy variables: school holiday and public holiday
+  school_holiday<- numeric(length(tgdatenumvec))
+  public_holiday<- numeric(length(tgdatenumvec))
+  for(i in seq_along(tgdatenumvec)){
+    selector<- which(holidays$start<=tgdatenumvec[i] & holidays$end>=tgdatenumvec[i])
+    if(length(selector)==1){
+      if(holidays$public.holiday[selector]==1){
+        public_holiday[i]<- 1
+      }else{
+        school_holiday[i]<- 1
+      }
+    }else if(length(selector)==2){
+      public_holiday[i]<- 1
+      school_holiday[i]<- 1
+    }else if(length(selector>2)){
+      stop(paste0("Entry ",i,", which is TG_DateNum date ",tgdatenumvec[i],", is found more than twice in the holiday data frame."))
+    }
+  }
+  out<- data.frame(school_holiday=school_holiday, public_holiday=public_holiday)
+  return(out)
+}
+
+IK2PKV<- function(IK.vector){
+  # IK.vector is a vector of IK codes; 0=publich health insurance, 1=private health insurance or no health insurance
+  # depends on ListeKrankenkassen
+  out<- ListeKrankenkassen$PKV[match(IK.vector,ListeKrankenkassen$IK)]
+  out[is.na(out)]<- 1
+  out[out==1]<- 1
+  return(out)
 }
 
 chunk.data<- function(df,  no.splits){
@@ -265,43 +297,13 @@ praxisID2location_id<- function(praxisID){
   return(out)
 }
 
-add.weather<- function(fdf, locationvec, no.workers){
-  praxes<- as.numeric(levels(as.factor(fdf$PraxisID)))
-  fdl<- list()
-  for(i in seq_along(praxes)){
-    fdl[[i]]<- fdf|>
-      filter(PraxisID==praxes[i])
-  }
-  wdl<- list()
-  wdf.names<- paste0("wetter_",praxisID2location(praxes))
-  for(i in seq_along(praxes)){
-    wdl[[i]]<- get(wdf.names, envir = .GlobalEnv)
-  }
-  
-  wcl<- makeCluster(no.workers)
-  dist.env<- environment()
-  clusterExport(wcl, varlist = c("fdl","wdl"), envir = dist.env)
-  result<- parLapply(wcl,seq_along(praxes),fun = function(k){
-    fdf_loc<- fdl[[k]]
-    wdf<- wdl[[k]]
-    
-  })
-  
-}
 
-ThomsDiscomfortIndex<- function(PraxisID, date){
-  wdf<- get(paste0("wetter_",praxisID2location(PraxisID)))|>
-    filter(TG_DateNum==date)
-  out<- mean(wdf$temperature_kelvin)-273.16-0.55*(1-0.01*mean(wdf$relative_humidity))*(mean(wdf$temperature_kelvin)-273.16-14.5)
-  return(out)
-}
 
 weatherdata.transformation<- function(wdf, sel.quantile=NA, sel.temperature_kelvin=NA, loc, dr){
   #takes a raw, hourly weather data frame and returns a cleaned, daily weather data frame with additional columns. Within these additional columns, Thom's discomfort index, the length of how long a heatwave lasted up to this day, and the data for the suggested discomfort index can be found.
   #sel.quantile OR sel.temperature have to be specified. They are the quantile or absolute temperature (in Kelvin) used to determine whether a day is part of a heatwave.
   #loc is a character string which is used to specify the location where the wdf data were recorded
   #dr is the date range of the diagnosis data
-  browser()
   full.wdf<- wdf
   n_before<- sum(full.wdf$TG_DateNum<dr[1])/24
   wdf<- wdf|>
@@ -330,18 +332,45 @@ weatherdata.transformation<- function(wdf, sel.quantile=NA, sel.temperature_kelv
   
   #add lags for suggested discomfort index
   lagged.data<- as.data.frame(matrix(NA,nrow = nrow(out), ncol = 42))
+  temp<- colMeans(matrix(full.wdf$temperature_kelvin, nrow = 24))
+  hum<- colMeans(matrix(full.wdf$relative_humidity, nrow = 24))
   for(i in 1:21){
-    lagged.data[,i]<- full.wdf$temperature_kelvin[seq(1,nrow(out))+n_before-i]
+    lagged.data[,i]<- temp[seq(1,nrow(out))+n_before-i]
     lagged.data[,i+21]<- full.wdf$relative_humidity[seq(1,nrow(out))+n_before-i]
   }
   cn.vec<- c(rep("temperature_kelvin_l",21), rep("relative_humidity_l",21))
   colnames(lagged.data)<- paste0(cn.vec,c(seq(1,21),seq(1,21)))
   out<- cbind(out,lagged.data)
   
-  assign(paste0("transformed_weather_",loc),out)
+  assign(paste0("transformed_weather_",loc),out, envir = .GlobalEnv)
 }
 
-SuggestedDiscomfortIndex<- function(date,loc,w,theta,rho,tau){
+
+SuggestedDiscomfortIndex<- function(loc,w,theta,rho,tau){
+  #uses loc to find a transformed weather data frame and calculates vis-à-vis a vector of the suggested discomfort index
   df<- get(paste0("transformed_weather_",loc), envir = .GlobalEnv)
-  
+  T<- df$daily_mean_temperature_kelvin
+  RH<- df$daily_mean_relative_humidity
+  out<- w[1]*(theta[1]*T + theta[2]*T^2 + theta[3]*T^3 + rho[1]*RH + rho[2]*RH + rho[3]*RH + tau* T*RH)
+  if(length(w)>1){
+    for(i in seq(2,length(w))){
+      #T<- get(paste0("df$temperature_kelvin_l",i))
+      T<- df[paste0("temperature_kelvin_l",i)]
+      #RH<- get(paste0("df$relative_humidity_l",i))
+      RH<- df[paste0("relative_humidity_l",i)]
+      out<- out+ w[i]*(theta[1]*T + theta[2]*T^2 + theta[3]*T^3 + rho[1]*RH + rho[2]*RH + rho[3]*RH + tau* T*RH)
+    }
+  }
+  return(out)
+}
+
+add.chronic<- function(diagdf,chronicdf){
+  addage<- as.data.frame(matrix(0,nrow = nrow(diagdf),ncol = 11))
+  colnames(addage)<- paste0(rep("chronic_",11),1:11)
+  for(i in seq(1,nrow(chronicdf))){
+    row.selector<- diagdf$uniPatID==chronicdf[i,1]
+    addage[row.selector,chronicdf[i,2]]<- addage[row.selector,chronicdf[i,2]]+1
+  }
+  out<- cbind(diagdf,addage)
+  return(out)
 }
