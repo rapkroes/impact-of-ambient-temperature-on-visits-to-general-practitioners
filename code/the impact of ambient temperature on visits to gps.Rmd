@@ -16,8 +16,25 @@ library(dplyr)
 library(parallel)
 ```
 ```{r}
+
+
 #read file with functions
 source("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/code/functions_mt.R")
+
+#read auxiliary data files
+ListeKrankenkassen<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/ListeKrankenkassen_up.csv")
+classification.matrix<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/classification.csv")
+icd10_blocks<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/icd10_blocks.csv")
+
+fake.data<- TRUE
+if(fake.data){
+  source_url("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/code/fakedgp_mt.R")
+}else{
+  #read in other data
+}
+
+#date range
+date.range<- range(Diag3$TG_DateNum)
 
 #location data
 location_information<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/location%20information.csv", header = TRUE, encoding = "Latin-1")
@@ -28,44 +45,40 @@ for(i in seq_along(location.name)){
   url_string<- paste0("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/weather%20data/wetter%20",location.name[i],".csv")
   im<- read.csv(url_string)
   colnames(im)<- c("time", "temperature_celsius", "relative_humidity", "dew_point", "apparent_temperature_celsius", "precipitation", "rain", "snow_fall", "snow_depth", "surface_pressure")
-  
-  
-  #filter out the correct dates, elsewise the averages get screwed (seasonality of data)
-  
-  
-  
+
   #unit transformations
   im$TG_DateNum<- date2TG_DateNum(im$time)
   im<- im|>
-    filter(TG_DateNum<739171)
+    filter(TG_DateNum>=date.range[1]-21 & TG_DateNum<=date.range[2])
   im$temperature_kelvin<- im$temperature_celsius +273.16
   
   assign(paste0("wetter_",location.name[i]),im)
+  weatherdata.transformation(im,sel.quantile = .95, loc = location.name[i])
 }
+
+#weatherdata.transformation(wetter_aalen,sel.quantile = .95, loc = location.name[1], dr = date.range)
+
 
 #daylight data
 for(i in seq_along(location.name)){
   url_string<- paste0("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/daylight%20hours%20data/daylight_",location.name[i],".csv")
   im<- read.csv(url_string, header = TRUE)
+  
+  #unit transformations
+  im$TG_DateNum<- date2TG_DateNum(im$time)
+  im<- im|>
+    filter(TG_DateNum>=date.range[1] & TG_DateNum<=date.range[2])
   assign(paste0("daylight_",location.name[i]),im)
 }
 
 #Covid-19 data
 covid.data<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/COVID-19-Faelle_7-Tage-Inzidenz_Landkreise.csv")
 
-#read auxiliary data files
-ListeKrankenkassen<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/ListeKrankenkassen_up.csv")
-classification.matrix<- read.csv("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/other%20data/classification.csv")
-icd10_blocks<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/icd10_blocks.csv")
 
 
 
-fake.data<- TRUE
-if(fake.data){
-  source_url("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/code/fakedgp_mt.R")
-}else{
-  #read in other data
-}
+
+
 
 ```
 We must check Diag's icd10 column: Since the icd10 field is a text field in the GP's software, the data might contain typing errors or atypical notation of diseases. This function returns a vector that filters out whose entries are =1 if they are 'suspicious' and 0 otherwise. An entry is considered suspicious if it does not have a length of 4, 6, or 7 characters. If it has 4, 6, or 7 characters it is suspicious if it does not follow either of the patterns "capital letter, two numbers, capital letter" or "capital letter, two numbers, fullstop, one or two numbers, capital letter".

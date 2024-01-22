@@ -117,18 +117,6 @@ chunk.adddata<- function(chunkeddl, adddata){
   return(chunked.adddata)
 }
 
-chronic.transformation<- function(diagdf){
-  #removes all chronic observations and eaves only non-chronic observations. Chronic observations are reintroduced as patient-specific data.
-  chronic.entry<- grepl("DD",diagdf$icd10)
-  category<- icd10.to.class(diagdf$icd10)
-  all.patients<- unique(diagdf$uniPatID)
-  chronic.category.matrix<- matrix(0,nrow = length(all.patients), ncol = 11)
-  only.dd<- cbind(diagdf,category)[chronic.entry,]
-  for(i in seq(1,nrow(only.dd))){
-    
-  }
-}
-
 add.stamm.new.par<- function(edf,sdf, no.splits,no.workers){
   #parallelised version of add.stamm.new
   dl_e<- chunk.data(edf,no.splits)
@@ -285,7 +273,7 @@ add.weather<- function(fdf, locationvec, no.workers){
       filter(PraxisID==praxes[i])
   }
   wdl<- list()
-  wdf.names<- paste0("heatwave_",praxisID2location(praxes))
+  wdf.names<- paste0("wetter_",praxisID2location(praxes))
   for(i in seq_along(praxes)){
     wdl[[i]]<- get(wdf.names, envir = .GlobalEnv)
   }
@@ -296,21 +284,9 @@ add.weather<- function(fdf, locationvec, no.workers){
   result<- parLapply(wcl,seq_along(praxes),fun = function(k){
     fdf_loc<- fdl[[k]]
     wdf<- wdl[[k]]
-    all.dates<- unique(fdf_loc$TG_DateNum)
-    addage<- as.data.frame(matrix(NA,nrow = nrow(fdf_loc), ncol = 3))
-    for(i in seq_along(all.dates)){
-      row.selector<- fdf_loc$TG_DateNum==all.dates[i]
-      addage[row.selector,]<- wdf[wdf$TG_DateNum==all.dates[i],2:4]
-    }
-    colnames(addage)<- c("daily_mean_temperature_kelvin", "daily_mean_relative_humidity", "length_heatwave")
-    out<- cbind(fdf_loc, addage)
-    return(out)
+    
   })
-  out<- result[[1]]
-  for(i in seq(2,length(praxes))){
-    out<- rbind(out,result[[i]])
-  }
-  return(out)
+  
 }
 
 ThomsDiscomfortIndex<- function(PraxisID, date){
@@ -320,13 +296,22 @@ ThomsDiscomfortIndex<- function(PraxisID, date){
   return(out)
 }
 
-weatherdata2heatwave<- function(wdf, sel.quantile=NA, sel.temperature_kelvin=NA, loc){
-  if(is.na(sel.quantile)$is.na(sel.temperature_kelvin)) stop("Either sel.quantile or sel.temperature has to be a numeric number. The other one has to be NA.")
+weatherdata.transformation<- function(wdf, sel.quantile=NA, sel.temperature_kelvin=NA, loc, dr){
+  #takes a raw, hourly weather data frame and returns a cleaned, daily weather data frame with additional columns. Within these additional columns, Thom's discomfort index, the length of how long a heatwave lasted up to this day, and the data for the suggested discomfort index can be found.
+  #sel.quantile OR sel.temperature have to be specified. They are the quantile or absolute temperature (in Kelvin) used to determine whether a day is part of a heatwave.
+  #loc is a character string which is used to specify the location where the wdf data were recorded
+  #dr is the date range of the diagnosis data
+  browser()
+  full.wdf<- wdf
+  n_before<- sum(full.wdf$TG_DateNum<dr[1])/24
+  wdf<- wdf|>
+    filter(TG_DateNum>=dr[1] & TG_DateNum<=dr[2])
+  if(is.na(sel.quantile) & is.na(sel.temperature_kelvin)) stop("Either sel.quantile or sel.temperature has to be a numeric number. The other one has to be NA.")
   daily.mean.temperature_kelvin<- colMeans(matrix(wdf$temperature_kelvin, nrow = 24))
   daily.mean.relative.humidity<- colMeans(matrix(wdf$relative_humidity, nrow = 24))
   dates<- unique(wdf$TG_DateNum)
   length.heatwave<- numeric(length = length(dates))
-  if(is.na(sel.temperature)){
+  if(is.na(sel.temperature_kelvin)){
     threshold<- quantile(daily.mean.temperature_kelvin, probs=sel.quantile)
     above.threshold<- daily.mean.temperature_kelvin>=threshold
   }else{
@@ -341,9 +326,22 @@ weatherdata2heatwave<- function(wdf, sel.quantile=NA, sel.temperature_kelvin=NA,
   }
   out<- as.data.frame(cbind(dates,daily.mean.temperature_kelvin,daily.mean.relative.humidity, length.heatwave))
   colnames(out)<- c("TG_DateNum", "daily_mean_temperature_kelvin", "daily_mean_relative_humidity", "length_heatwave")
-  assign(paste0("heatwave",loc),out)
+  out$thoms_discomfort_index<- daily.mean.temperature_kelvin-273.16-0.55*(1-0.01*daily.mean.relative.humidity)*(daily.mean.temperature_kelvin-273.16-14.5)
+  
+  #add lags for suggested discomfort index
+  lagged.data<- as.data.frame(matrix(NA,nrow = nrow(out), ncol = 42))
+  for(i in 1:21){
+    lagged.data[,i]<- full.wdf$temperature_kelvin[seq(1,nrow(out))+n_before-i]
+    lagged.data[,i+21]<- full.wdf$relative_humidity[seq(1,nrow(out))+n_before-i]
+  }
+  cn.vec<- c(rep("temperature_kelvin_l",21), rep("relative_humidity_l",21))
+  colnames(lagged.data)<- paste0(cn.vec,c(seq(1,21),seq(1,21)))
+  out<- cbind(out,lagged.data)
+  
+  assign(paste0("transformed_weather_",loc),out)
 }
 
 SuggestedDiscomfortIndex<- function(date,loc,w,theta,rho,tau){
+  df<- get(paste0("transformed_weather_",loc), envir = .GlobalEnv)
   
 }

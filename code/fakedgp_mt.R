@@ -3,7 +3,7 @@
 art.data<- function(n){
   #creates a list of data frames with n entries, with entries trying to emulate the original data sets. 
   ID.levels<- seq(1,n/4)
-  earliest.date<- date2TG_DateNum("2016-01-01")
+  earliest.date<- date2TG_DateNum("2016-03-01")
   latest.date<- date2TG_DateNum("2022-12-31")
   date.vec<- seq(earliest.date,latest.date)
   art.stamm<- data.frame(
