@@ -48,7 +48,7 @@ art.data<- function(n){
     PatID= NA,
     TG_DateNum= art.stamm$TG_DateNum,
     index_i=NA,
-    PraxisID= sample(1:7,n/4, replace = TRUE),
+    PraxisID= sample(c(1:6,8),n/4, replace = TRUE),
     Praxisbesuch=NA,
     Anz_EBMs= NA,
     UeberweiserBSNR= NA,

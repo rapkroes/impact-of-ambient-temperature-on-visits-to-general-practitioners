@@ -374,3 +374,11 @@ add.chronic<- function(diagdf,chronicdf){
   out<- cbind(diagdf,addage)
   return(out)
 }
+
+praxis_id2landkreis_id<- function(practiceids){
+  practiceids<- as.character(practiceids)
+  out<- numeric(length(practiceids))
+  for(i in seq_along(practiceids)){
+    out[i]<- location_information$landkreis_id[grepl(practiceids[i],location_information$praxis_ids)]
+  }
+}

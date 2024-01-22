@@ -120,6 +120,9 @@ full.df_3$month<- as.factor(TG_DateNum2month(full.df_3$TG_DateNum))
 full.df_3$year<- as.factor(TG_DateNum2year(full.df_3$TG_DateNum))
 full.df_3$age<- TG_DateNum2year(full.df_3$TG_DateNum)-full.df_3$Geburtsjahr
 
+### covid-19
+full.df_4<- full.df_3
+full.df_4$landkreis_id<- praxis_id2landkreis_id(full.df_4$PraxisID)
 ```
 
 ```{r}
