@@ -72,8 +72,9 @@ for(i in seq_along(location.name)){
 
 #Covid-19 data
 covid.data<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/COVID-19-Faelle_7-Tage-Inzidenz_Landkreise.csv")
-
-
+covid.data<- covid.data|>
+  filter(Landkreis_id %in% location_information$landkreis_id)
+covid.data$TG_DateNum<- date2TG_DateNum(covid.data$Meldedatum)
 
 
 
@@ -96,21 +97,24 @@ chronic.df$diag_category<- icd10.to.class(chronic.df$diag_category)
 full.df_1<- add.chronic(Diag3[!chronic.sel,], chronic.df)
 
 
+
 ### stamm data
-full.df_1<- add.stamm.new.par(Diag3,Stamm3,no.splits = 50, no.workers = 2)
+full.df_1.2<- add.stamm.new.par(Diag3,Stamm3,no.splits = 50, no.workers = 2)
 # gender variable
 gender.selector<- full.df_1$Weibl==1 | full.df_1$Maennl==1 | full.df_1$stamm.is.there==0
-full.df_1$female<- full.df_1$Weibl
-full.df_1.2<- full.df_1[gender.selector,]|>
+full.df_1.2$female<- full.df_1$Weibl
+full.df_1.3<- full.df_1.2[gender.selector,]|>
   select(-Weibl,-Maennl,-Transgen,-Divers,-Geschlundef)
 #add PKV (private health insurance) dummy
-full.df_1.2$PKV<- IK2PKV(full.df_1$IK)
+full.df_1.3$PKV<- IK2PKV(full.df_1$IK)
 
 ### konsul
 full.df_2<- add.konsul(full.df_1.2, Konsul3, no.splits = 50, no.workers = 2)
+col.selector<- !duplicated(colnames(full.df_2))
+full.df_2.2<- full.df_2[,col.selector]
 
 ### time
-full.df_3<- full.df_2
+full.df_3<- full.df_2.2
 full.df_3$dow<- as.factor(TG_DateNum2dow(full.df_3$TG_DateNum))
 full.df_3<- cbind(full.df_3,TG_DateNum2holiday(full.df_3$TG_DateNum))
 full.df_3$week<- as.factor(TG_DateNum2week(full.df_3$TG_DateNum))
@@ -120,9 +124,17 @@ full.df_3$age<- TG_DateNum2year(full.df_3$TG_DateNum)-full.df_3$Geburtsjahr
 
 ### covid-19
 full.df_4<- full.df_3
-full.df_4$landkreis_id<- praxis_id2landkreis_id(full.df_4$PraxisID)
+full.df_4$Landkreis_id<- praxis_id2landkreis_id(full.df_4$PraxisID)
+full.df_4<- full.df_4|>
+  arrange(Landkreis_id,TG_DateNum)
+full.df_4.2<- add.covid(full.df_4,covid.data,2)
+full.df_4.2$covid_positive_incidence<- full.df_4.2$covid_7_day_incidence>0
 
-
+### risk factors
+full.df_5<- full.df_4.2
+full.df_5$smoking<- risk.factor.merger(full.df_5$TG_A_Rauchen,full.df_5$TG_RF_Rauchen)
+full.df_5$alcohol<- risk.factor.merger(full.df_5$TG_A_Alkohol,full.df_5$TG_RF_Alkohol)
+full.df_5$sport<- risk.factor.merger(full.df_5$TG_A_Sport,full.df_5$TG_RF_Sport)
 ```
 
 ```{r}

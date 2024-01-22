@@ -381,4 +381,66 @@ praxis_id2landkreis_id<- function(practiceids){
   for(i in seq_along(practiceids)){
     out[i]<- location_information$landkreis_id[grepl(practiceids[i],location_information$praxis_ids)]
   }
+  return(out)
+}
+
+add.covid<- function(df,cdf, no.workers){
+  all.location.ids<- unique(df$Landkreis_id)
+  dl<- list()
+  cl<- list()
+  for(i in seq_along(all.location.ids)){
+    dl[[i]]<- df|>
+      filter(Landkreis_id==all.location.ids[i])
+    cl[[i]]<- cdf|>
+      filter(Landkreis_id==all.location.ids[i])
+  }
+  
+  dist.env<- environment()
+  covid.cluster<- makeCluster(no.workers)
+  clusterExport(cl = covid.cluster, varlist = c("dl","cl"), envir = dist.env)
+  result<- parLapply(covid.cluster,seq_along(all.location.ids),fun = function(k){
+    base.data<- dl[[k]]
+    covid.addage<- cl[[k]]
+    
+    out<- numeric(nrow(base.data))
+    dates<- unique(base.data$TG_DateNum)
+    for(i in seq_along(dates)){
+      selector<- base.data$TG_DateNum==dates[i]
+      if(any(covid.addage$TG_DateNum==dates[i])){
+        out[selector]<- covid.addage$Inzidenz_7.Tage[covid.addage$TG_DateNum==dates[i]]
+      }
+    }
+    out<- cbind(base.data,out)
+    colnames(out)<- c(colnames(base.data),"covid_7_day_incidence")
+    return(out)
+  })
+  
+  out<- result[[1]]
+  for(i in seq(2,length(result))){
+    out<- rbind(out, result[[i]])
+  }
+  
+  return(out)
+}
+
+risk.factor.merger<- function(vec_1, vec_2){
+  out<- numeric(length(vec_1))
+  for(i in seq_along(vec_1)){
+    if(vec_1[i]==vec_2[i]){
+      out[i]<- vec_1[i]
+    }else{
+      if((is.na(vec_1[i])& !is.na(vec_2[i]))){
+        out[i]<- vec_1[i]
+      }else if(is.na(vec_2[i])& !is.na(vec_1[i])){
+        out[i]<- vec_2[i]
+      }else{
+        if((vec_1[i]==1 & vec_2[i]==0)|(vec_1[i]==0 & vec_2[i]==1)){
+          out[i]<- 1
+        }else{
+          stop(paste("There is an issue with the values",vec_1[i],"and",vec_2[i]))
+        }
+      }
+    }
+  }
+  return(out)
 }
