@@ -345,6 +345,38 @@ weatherdata.transformation<- function(wdf, sel.quantile=NA, sel.temperature_kelv
   assign(paste0("transformed_weather_",loc),out, envir = .GlobalEnv)
 }
 
+add.weather<- function(fdf,no.workers){
+  locations<- unique(fdf$landkreis)
+  fl<- list()
+  twl<- list()
+  for(i in seq_along(locations)){
+    fl[[i]]<- fdf|>
+      filter(landkreis==locations[i])
+    twl[[i]]<- get(paste0("transformed_weather_",locations[i]), envir = .GlobalEnv)
+  }
+  dist.env<- environment()
+  w.cl<- makeCluster(no.workers)
+  clusterExport(cl = w.cl, varlist = c("fl","twl"), envir = dist.env)
+  
+  result<- parLapply(cl = w.cl, seq_along(locations), fun = function(k){
+    patient.data<- fl[[k]]
+    dates<- patient.data$TG_DateNum
+    weather.data<- twl[[k]]
+    out<- as.data.frame(matrix(NA,nrow = length(dates), ncol = ncol(weather.data)))
+    for(i in seq_along(dates)){
+      out[i,]<- weather.data[which(weather.data$TG_DateNum==dates[i]),]
+    }
+    colnames(out)<- colnames(weather.data)
+    out<- out[,-1]
+    out<- cbind(patient.data,out)
+  })
+  
+  out<- result[[1]]
+  for(i in seq(2,length(locations))){
+    out<- rbind(out,result[[i]])
+  }
+  return(out)
+}
 
 SuggestedDiscomfortIndex<- function(loc,w,theta,rho,tau){
   #uses loc to find a transformed weather data frame and calculates vis-à-vis a vector of the suggested discomfort index
@@ -371,6 +403,8 @@ add.chronic<- function(diagdf,chronicdf){
     row.selector<- diagdf$uniPatID==chronicdf[i,1]
     addage[row.selector,chronicdf[i,2]]<- addage[row.selector,chronicdf[i,2]]+1
   }
+  no_all_chronic_diseases<- rowSums(addage)
+  addage$no_all_chronic_diseases<- no_all_chronic_diseases
   out<- cbind(diagdf,addage)
   return(out)
 }

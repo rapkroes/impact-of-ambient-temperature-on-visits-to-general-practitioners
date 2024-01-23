@@ -6,13 +6,15 @@ output: html_document
 ---
 
 This is the main Markdown file for the data analysis of 'Impact of Ambient Temperature on Visits to General Practitioners' by Raphael Kroes.
-The original data cannot be provided publicly because of data protection reasons. However, a fake dataset is provided, which can be used to test the code.
+The original data cannot be provided publicly because of data protection reasons. However, an algorithm to create a fake dataset is provided, which can be used to test the code.
 ```{r}
 library(devtools)
 library(readxl)
 library(lubridate)
 library(dplyr)
 library(parallel)
+library(glmnet)
+library(splines)
 ```
 ```{r}
 
@@ -30,7 +32,22 @@ fake.data<- TRUE
 if(fake.data){
   source_url("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/code/fakedgp_mt.R")
 }else{
-  #read in other data
+  old.wd<- getwd()
+  setwd("N:/StudentischeHilfskraefte/_Kroes (Christoph)/Routinedaten/01_Husten/R/DB")
+  names.vec<- c("Diag3","Stamm3","Konsul3")
+  
+  for (i in seq(1,length(names.vec))){
+    file.name<- paste0("DB_",names.vec[i],"_v03",".csv")
+  
+    im.file<- read.csv(file = file.name, header = TRUE, sep = ";")
+  
+    assign(names.vec[i],im.file)
+  
+  }
+  # remove duplicate file and unnecessary name
+  rm(file.name,im.file)
+  
+  setwd(old.wd)
 }
 
 #date range
@@ -86,7 +103,13 @@ We must check Diag's icd10 column: Since the icd10 field is a text field in the 
 View(Diag3[as.logical(suspicious.Diag.entries(Diag3$icd10)),])
 ```
 
-Stamm and Konsul must be merged to Diag, and the resulting data frame must be cleared.
+Merging and transformation process, using Diag as baseline:
+1. Filter out chronic diseases and add them as patient specific variables
+2. Merge Stamm data, create new gender dummy, add dummy for private or public health insurance provider, add county (Landkreis; for convenience)
+3. Merge Konsul data (and remove duplicate columns)
+4. Create time variables from the date
+5. Merge Covid-19 incidence values, also add dummy variable for incidence larger than zero
+6. Create risk factors variables
 ```{r}
 ### chronic diseases
 chronic.sel<- grepl("DD",Diag3$DiagTyp)
@@ -97,19 +120,20 @@ chronic.df$diag_category<- icd10.to.class(chronic.df$diag_category)
 full.df_1<- add.chronic(Diag3[!chronic.sel,], chronic.df)
 
 
-
 ### stamm data
-full.df_1.2<- add.stamm.new.par(Diag3,Stamm3,no.splits = 50, no.workers = 2)
+full.df_1.2<- add.stamm.new.par(full.df_1,Stamm3,no.splits = 50, no.workers = 2)
 # gender variable
-gender.selector<- full.df_1$Weibl==1 | full.df_1$Maennl==1 | full.df_1$stamm.is.there==0
-full.df_1.2$female<- full.df_1$Weibl
+gender.selector<- full.df_1.2$Weibl==1 | full.df_1.2$Maennl==1 | full.df_1.2$stamm.is.there==0
+full.df_1.2$female<- full.df_1.2$Weibl
 full.df_1.3<- full.df_1.2[gender.selector,]|>
   select(-Weibl,-Maennl,-Transgen,-Divers,-Geschlundef)
 #add PKV (private health insurance) dummy
-full.df_1.3$PKV<- IK2PKV(full.df_1$IK)
+full.df_1.3$PKV<- IK2PKV(full.df_1.3$IK)
+#add Landkreis_id
+full.df_1.3$landkreis<- praxisID2location(full.df_1.3$PraxisID)
 
 ### konsul
-full.df_2<- add.konsul(full.df_1.2, Konsul3, no.splits = 50, no.workers = 2)
+full.df_2<- add.konsul(full.df_1.3, Konsul3, no.splits = 50, no.workers = 2)
 col.selector<- !duplicated(colnames(full.df_2))
 full.df_2.2<- full.df_2[,col.selector]
 
@@ -135,14 +159,42 @@ full.df_5<- full.df_4.2
 full.df_5$smoking<- risk.factor.merger(full.df_5$TG_A_Rauchen,full.df_5$TG_RF_Rauchen)
 full.df_5$alcohol<- risk.factor.merger(full.df_5$TG_A_Alkohol,full.df_5$TG_RF_Alkohol)
 full.df_5$sport<- risk.factor.merger(full.df_5$TG_A_Sport,full.df_5$TG_RF_Sport)
-```
 
+### add weather variables
+full.df_6<- full.df_5
+full.df_6<- add.weather(full.df_6,2)
+
+```
+Research Question 1:
 ```{r}
-location.name<- c("aalen","ammerbuch","baiersbronn","boeblingen","boennigheim","pforzheim","pleidelsheim","salach","schluchsee","schopfheim","schwaebisch gmuend","waldachtal","wendlingen")
-latitude<- c(48.8,48.6,48.5,48.7,49,48.9,49,48.7,47.8,47.7,48.8,48.5,48.7)
-longitude<- c(10.1,9,8.4,9,9.1,8.7,9.2,9.7,8.2,7.8,9.8,8.6,9.4)
-write.csv(cbind(location.name,latitude,longitude),"location information.csv")
-getwd()
+#create right hand side input matrices. Some dummies are dropped to avoid multicollinearity.
+rhs_Thom_q1<- as.matrix(cbind(ns(full.df_6$thoms_discomfort_index, df = 3),
+                              model.matrix(~as.factor(full.df_6$PraxisID)-1)[,-1],
+                              model.matrix(~as.factor(full.df_6$dow)-1)[,-1],
+                              full.df_6$public_holiday,
+                              full.df_6$school_holiday,
+                              model.matrix(~as.factor(full.df_6$week)-1)[,-1],
+                              model.matrix(~as.factor(full.df_6$month)-1)[,-1],
+                              model.matrix(~as.factor(full.df_6$year)-1)[,-1],
+                              ns(full.df_6$covid_7_day_incidence, df = 3)
+                              ))
+colnames(rhs_Thom_q1)<-c("thoms_discomfort_index_1","thoms_discomfort_index_2","thoms_discomfort_index_3",
+                         paste0("praxis_", levels(as.factor(full.df_6$PraxisID)))[-1],
+                         paste0("dow_", levels(as.factor(full.df_6$dow)))[-1],
+                         "public_holiday",
+                         "school_holiday",
+                         paste0("week_", levels(as.factor(full.df_6$week)))[-1],
+                         paste0("month_", levels(as.factor(full.df_6$month)))[-1],
+                         paste0("year_", levels(as.factor(full.df_6$year)))[-1],
+                         "covid_7_day_incidence_1","covid_7_day_incidence_2","covid_7_day_incidence_3")
+
+
+#estimate age quantiles
+model_1<- glmnet(rhs_Thom_q1, full.df_6$age, family = "gaussian", alpha = 0.5, lambda = 1)
+summary(model_1$beta)
+
+lm(full.df_6$age)
+
 ```
 
 
