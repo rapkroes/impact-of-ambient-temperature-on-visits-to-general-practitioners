@@ -1,4 +1,4 @@
-elastic.net.function<- function(inputdf, y, sel.loss.function, sel.quantile, spline.pos=NA, spline.knots, alpha,lambda, no.starts, seed){
+elastic.net.function<- function(inputdf, y, sel.loss.function, sel.quantile, spline.pos=NA, spline.knots, alpha,lambda, no.starts, lc.penalty = 100, seed){
   #linear regression with elastic net regularisation, written by myself.
   #inputdf= data frame of inputs
   #y= response variable
@@ -165,20 +165,15 @@ elastic.net.function<- function(inputdf, y, sel.loss.function, sel.quantile, spl
   #generate loss function
   if(sel.loss.function=="quantile"){
     loss.function<- function(beta){
-      quantile.loss.fct(beta,df,y,sel.quantile,alpha,lambda)+100*sum(abs(complete.constraint.matrix%*%beta))
+      quantile.loss.fct(beta,df,y,sel.quantile,alpha,lambda)+lc.penalty*sum((complete.constraint.matrix%*%beta)^2)
     }
   }else if(sel.loss.function=="proportion"){
     loss.function<- function(beta){
-      proportion.loss.fct(beta,df,y,alpha,lambda)+100*sum(abs(complete.constraint.matrix%*%beta))
+      proportion.loss.fct(beta,df,y,alpha,lambda)+lc.penalty*sum((complete.constraint.matrix%*%beta)^2)
     }
   }else if(sel.loss.function=="cross-entropy"){
-    loss.function<- function(beta.matrix){
-      transformed.fitted<- exp(as.matrix(df)%*%beta.matrix)
-      transformed.fitted<- log(transformed.fitted*matrix((rowSums(transformed.fitted))^(-1),nrow = nrow(transformed.fitted), ncol = ncol(ncol(transformed.fitted))))
-      y.dummy.matrix<- model.matrix(~as.factor(y))
-      sel.transformed.fitted<- -y.dummy.matrix*transformed.fitted
-      out<- sum(sel.transformed.fitted)+lambda*(alpha*sum(abs(beta))+(1-alpha)*sqrt(sum(beta^2)))
-      return(out)
+    loss.function<- function(beta){
+      cross.entropy.loss.fct(beta,df,y,alpha,lambda)+lc.penalty*sum((complete.constraint.matrix%*%matrix(beta,nrow = ncol(d)))^2)
     }
   }
   
@@ -194,14 +189,23 @@ elastic.net.function<- function(inputdf, y, sel.loss.function, sel.quantile, spl
     start.col<- start.col+p
   }
 
-  #run the constrained optimisation problem
   browser()
   result.list<- list()
-  for (i in seq(1,no.starts)) {
-    result.list[[i]]<- optim(par = rnorm(ncol(df)),
-                             fn = loss.function,
-                             method = "BFGS")
+  if(any(sel.loss.function %in% c("quantile","proportion"))){
+    for (i in seq(1,no.starts)) {
+      result.list[[i]]<- optim(par = rnorm(ncol(df)),
+                               fn = loss.function,
+                               method = "BFGS")
+    }
+  }else if(sel.loss.function=="cross-entropy"){
+    for (i in seq(1,no.starts)) {
+      beta.length<- ncol(df)*length(levels(as.factor(y)))
+      result.list[[i]]<- optim(par = rnorm(beta.length),
+                               fn = loss.function,
+                               method = "BFGS")
+    }
   }
+  
   return(result.list)
 }
 
@@ -210,7 +214,9 @@ elastic.net.function<- function(inputdf, y, sel.loss.function, sel.quantile, spl
 
 
 
-model.trial<- elastic.net.function(x,y, sel.loss.function = "proportion", spline.pos = c(1,4), spline.knots = c(5,5),no.starts = 30, seed = 3131, alpha = 0.5, lambda = 1)
+model.trial<- elastic.net.function(x,y, sel.loss.function = "cross-entropy", spline.pos = c(1,4), spline.knots = c(5,5),no.starts = 10, seed = 4576975, alpha = 0.5, lambda = 1)
+
+model.trial<- elastic.net.function(x,y, sel.loss.function = "proportion", spline.pos = c(1,4), spline.knots = c(5,5),no.starts = 10, seed = 4576975, alpha = 0.5, lambda = 1)
 
 model.trial<- elastic.net.function(x,y, sel.loss.function = "quantile", sel.quantile = 0.5, spline.pos = c(1,4), spline.knots = c(5,5),no.starts = 30, seed = 158165, alpha = 0.5, lambda = 1)
 
@@ -247,24 +253,26 @@ quantile.loss.fct<- function(beta,d,y,q,a,l){
 
 proportion.loss.fct<- function(beta,d,y,a,l){
   transformed.fitted<- 1/(1+exp(-as.matrix(d)%*%matrix(beta,ncol = 1)))
-  out<- sum(-y*log(transformed.fitted)-(1-y)*log(1-transformed.fitted))+l*(a*sum(abs(beta))+(1-a)*sqrt(sum(beta^2)))
+  out<- sum(-y*log(transformed.fitted)-(1-y)*log(1-transformed.fitted)) + l*(a*sum(abs(beta))+(1-a)*sqrt(sum(beta^2)))
   return(out)
 }
 
-cross.entropy.loss.fct<- function(beta.matrix,d,y,a,l){
-  transformed.fitted<- exp(as.matrix(d)%*%beta.matrix)
-  transformed.fitted<- log(transformed.fitted*matrix((rowSums(transformed.fitted))^(-1),nrow = nrow(transformed.fitted), ncol = ncol(ncol(transformed.fitted))))
-  y.dummy.matrix<- model.matrix(~as.factor(y))
-  sel.transformed.fitted<- -y.dummy.matrix*transformed.fitted
-  out<- sum(sel.transformed.fitted)+l*a*sum(abs(beta))+l*(a*sum(abs(beta))+(1-a)*sqrt(sum(beta^2)))
+cross.entropy.loss.fct<- function(beta,d,y,a,l){
+  beta.matrix<- matrix(beta,nrow = ncol(d))
+  fitted<- exp(as.matrix(d)%*%beta.matrix)
+  q<- diag(rowSums(fitted)^(-1))%*%fitted
+  y_dummy<- model.matrix(~as.factor(y))
+  out<- y_dummy*q + l*(a*sum(abs(beta))+(1-a)*sqrt(sum(beta^2)))
   return(out)
 }
+cross.entropy.loss.fct(rnorm(p*3),x,y,0.5,1)
+
 
 set.seed(2624)
 n<- 100
 p<- 50
-# y<- as.factor(sample(LETTERS[1:3],n,replace = TRUE))
+y<- as.factor(sample(LETTERS[1:3],n,replace = TRUE))
 # y<- rnorm(n)
-y<- round(runif(n))
+# y<- round(runif(n))
 x<- as.data.frame(matrix(rnorm(n*p), nrow = n))
 colnames(x)<- paste0(sample(LETTERS,ncol(x),replace = TRUE),round(rnorm(ncol(x)),4))
