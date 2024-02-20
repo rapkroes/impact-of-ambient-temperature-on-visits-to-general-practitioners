@@ -165,15 +165,15 @@ elastic.net.function<- function(inputdf, y, sel.loss.function, sel.quantile, spl
   #generate loss function
   if(sel.loss.function=="quantile"){
     loss.function<- function(beta){
-      quantile.loss.fct(beta,df,y,sel.quantile,alpha,lambda)+lc.penalty*sum((complete.constraint.matrix%*%beta)^2)
+      quantile.loss.fct(beta = beta,d = df,y = y,q = sel.quantile,a = alpha,l = lambda)+lc.penalty*sum((complete.constraint.matrix%*%beta)^2)
     }
   }else if(sel.loss.function=="proportion"){
     loss.function<- function(beta){
-      proportion.loss.fct(beta,df,y,alpha,lambda)+lc.penalty*sum((complete.constraint.matrix%*%beta)^2)
+      proportion.loss.fct(beta = beta,d = df,y = y,a = alpha,l = lambda)+lc.penalty*sum((complete.constraint.matrix%*%beta)^2)
     }
   }else if(sel.loss.function=="cross-entropy"){
     loss.function<- function(beta){
-      cross.entropy.loss.fct(beta,df,y,alpha,lambda)+lc.penalty*sum((complete.constraint.matrix%*%matrix(beta,nrow = ncol(d)))^2)
+      cross.entropy.loss.fct(beta = beta,d = df,y = y,a = alpha,l = lambda)+lc.penalty*sum((complete.constraint.matrix%*%matrix(beta,nrow = ncol(d)))^2)
     }
   }
   
@@ -188,22 +188,25 @@ elastic.net.function<- function(inputdf, y, sel.loss.function, sel.quantile, spl
     start.row<- start.row+n
     start.col<- start.col+p
   }
-
-  browser()
-  result.list<- list()
+  
+  start.value.list<- list()
   if(any(sel.loss.function %in% c("quantile","proportion"))){
     for (i in seq(1,no.starts)) {
-      result.list[[i]]<- optim(par = rnorm(ncol(df)),
-                               fn = loss.function,
-                               method = "BFGS")
+      start.value.list[[i]]<- rnorm(ncol(df))
     }
   }else if(sel.loss.function=="cross-entropy"){
     for (i in seq(1,no.starts)) {
       beta.length<- ncol(df)*length(levels(as.factor(y)))
-      result.list[[i]]<- optim(par = rnorm(beta.length),
-                               fn = loss.function,
-                               method = "BFGS")
+      start.value.list[[i]]<- rnorm(beta.length)
     }
+  }
+
+  browser()
+  result.list<- list()
+  for (i in seq(1,no.starts)) {
+    result.list[[i]]<- optim(par = start.value.list[[i]],
+                             fn = loss.function,
+                             method = "BFGS")
   }
   
   return(result.list)
@@ -213,22 +216,34 @@ elastic.net.function<- function(inputdf, y, sel.loss.function, sel.quantile, spl
 
 
 
+set.seed(2624)
+y<- as.factor(sample(LETTERS[1:3],n,replace = TRUE))
+model.trial<- elastic.net.function(x,y, sel.loss.function = "cross-entropy", spline.pos = c(49,50), spline.knots = c(5,5),no.starts = 10, seed = 4576975, alpha = 0.5, lambda = 1)
 
-model.trial<- elastic.net.function(x,y, sel.loss.function = "cross-entropy", spline.pos = c(1,4), spline.knots = c(5,5),no.starts = 10, seed = 4576975, alpha = 0.5, lambda = 1)
+set.seed(2624)
+y<- round(runif(n))
+model.trial<- elastic.net.function(x,y, sel.loss.function = "proportion", spline.pos = c(49,50), spline.knots = c(5,5),no.starts = 10, seed = 4576975, alpha = 0.5, lambda = 1)
 
-model.trial<- elastic.net.function(x,y, sel.loss.function = "proportion", spline.pos = c(1,4), spline.knots = c(5,5),no.starts = 10, seed = 4576975, alpha = 0.5, lambda = 1)
-
-model.trial<- elastic.net.function(x,y, sel.loss.function = "quantile", sel.quantile = 0.5, spline.pos = c(1,4), spline.knots = c(5,5),no.starts = 30, seed = 158165, alpha = 0.5, lambda = 1)
-
-
-
-
-
-
-
-
+set.seed(2624)
+beta_true<- rnorm(p)
+y<- as.matrix(x)%*%beta_true
+model.trial<- elastic.net.function(x,y, sel.loss.function = "quantile", sel.quantile = 0.5, spline.pos = c(49,50), spline.knots = c(5,5),no.starts = 10, seed = 158165, alpha = 0.5, lambda = 3)
 
 
+
+
+
+
+
+values<- numeric(length(model.trial))
+pars<- matrix(NA,ncol = length(model.trial), nrow = length(model.trial[[1]]$par))
+for(i in seq_along(model.trial)){
+  values[i]<- model.trial[[i]]$value
+  pars[,i]<- beta_true-model.trial[[i]]$par
+}
+values
+model.trial[[5]]$par-beta_true
+summary(pars)
 
 
 
@@ -246,14 +261,15 @@ model.trial<- elastic.net.function(x,y, sel.loss.function = "quantile", sel.quan
 
 
 quantile.loss.fct<- function(beta,d,y,q,a,l){
+  n<- nrow(d)
   residual<- y-as.matrix(d)%*%matrix(beta,ncol = 1)
   positive<- residual>0
-  return(sum(q*residual[positive])+sum((q-1)*residual[!positive])+l*(a*sum(abs(beta))+(1-a)*sqrt(sum(beta^2))))
+  return(sum(q*residual[positive])/n+sum((q-1)*residual[!positive])/n+l*(a*sum(abs(beta))+(1-a)*sqrt(sum(beta^2))))
 }
 
 proportion.loss.fct<- function(beta,d,y,a,l){
   transformed.fitted<- 1/(1+exp(-as.matrix(d)%*%matrix(beta,ncol = 1)))
-  out<- sum(-y*log(transformed.fitted)-(1-y)*log(1-transformed.fitted)) + l*(a*sum(abs(beta))+(1-a)*sqrt(sum(beta^2)))
+  out<- mean(-y*log(transformed.fitted)-(1-y)*log(1-transformed.fitted)) + l*(a*sum(abs(beta))+(1-a)*sqrt(sum(beta^2)))
   return(out)
 }
 
@@ -271,8 +287,71 @@ cross.entropy.loss.fct(rnorm(p*3),x,y,0.5,1)
 set.seed(2624)
 n<- 100
 p<- 50
-y<- as.factor(sample(LETTERS[1:3],n,replace = TRUE))
+# y<- as.factor(sample(LETTERS[1:3],n,replace = TRUE))
 # y<- rnorm(n)
-# y<- round(runif(n))
+# y<- rnorm(n)
+y<- round(runif(n))
 x<- as.data.frame(matrix(rnorm(n*p), nrow = n))
 colnames(x)<- paste0(sample(LETTERS,ncol(x),replace = TRUE),round(rnorm(ncol(x)),4))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+lapply(seq_along(beta.list), FUN = function(z){
+  beta_start<- beta.list[[z]]
+  ticker<- 1
+  convergence<- FALSE
+  beta_new<- beta_start
+  beta_sugg<- beta_new
+  step.vec<- rep(step.size,length(beta_start))
+  while(ticker<=max.iter && !convergence){
+    beta_baseline<- beta_new
+    for(i in seq_along(beta_start)){
+      beta_sugg[i]<- beta_new[i]-step.vec[i]*loss.gradient(i, beta_new)
+      while(loss.function(beta_sugg)>loss.function(beta_new)){
+        step.vec[i]<- 0.5*step.vec[i]
+        beta_sugg[i]<- beta_new[i]-step.vec[i]*loss.gradient(i, beta_new)
+      }
+      if(abs(beta_sugg[i])<=tol){
+        beta_round<- beta_sugg
+        beta_round[i]<- 0
+        if(loss.function(beta_round)<=loss.function(beta_sugg)){
+          beta_sugg<- beta_round
+        }
+      }
+      beta_new<- beta_sugg
+    }
+    ticker<- ticker+1
+    convergence<- loss.function(beta_baseline)-loss.function(beta_new) <=tol
+  }
+  out.list<- list()
+  out.list$converged<- convergence
+  out.list$beta<- beta_new
+  out.list$loss_old<- loss.function(beta_start)
+  out.list$loss_new<- loss.function(beta_new)
+  out.list$iterations<- ticker-1
+  return(out.list)
+})
+

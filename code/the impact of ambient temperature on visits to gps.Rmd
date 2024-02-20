@@ -13,8 +13,7 @@ library(readxl)
 library(lubridate)
 library(dplyr)
 library(parallel)
-library(glmnet)
-library(splines)
+
 ```
 ```{r}
 
@@ -190,10 +189,8 @@ colnames(rhs_Thom_q1)<-c("thoms_discomfort_index_1","thoms_discomfort_index_2","
 
 
 #estimate age quantiles
-model_1<- glmnet(rhs_Thom_q1, full.df_6$age, family = "gaussian", alpha = 0.5, lambda = 1)
-summary(model_1$beta)
 
-lm(full.df_6$age)
+
 
 ```
 
