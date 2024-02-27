@@ -13,6 +13,7 @@ library(readxl)
 library(lubridate)
 library(dplyr)
 library(parallel)
+library(quantreg)
 
 ```
 ```{r}
@@ -110,17 +111,18 @@ Merging and transformation process, using Diag as baseline:
 5. Merge Covid-19 incidence values, also add dummy variable for incidence larger than zero
 6. Create risk factors variables
 ```{r}
-### chronic diseases
+### acute and chronic diseases, last visit
 chronic.sel<- grepl("DD",Diag3$DiagTyp)
 chronic.df<- as.data.frame(cbind(Diag3$uniPatID,Diag3$icd10)[chronic.sel,])|>
   distinct()
 colnames(chronic.df)<- c("uniPatID", "diag_category")
 chronic.df$diag_category<- icd10.to.class(chronic.df$diag_category)
 full.df_1<- add.chronic(Diag3[!chronic.sel,], chronic.df)
-
+full.df_1$diag_class<- icd10.to.class(full.df_1$icd10)
+full.df_1.1<- add.last.visit(full.df_1, no.splits = 50, no.workers = 2)
 
 ### stamm data
-full.df_1.2<- add.stamm.new.par(full.df_1,Stamm3,no.splits = 50, no.workers = 2)
+full.df_1.2<- add.stamm.new.par(full.df_1.1,Stamm3,no.splits = 50, no.workers = 2)
 # gender variable
 gender.selector<- full.df_1.2$Weibl==1 | full.df_1.2$Maennl==1 | full.df_1.2$stamm.is.there==0
 full.df_1.2$female<- full.df_1.2$Weibl
@@ -163,21 +165,28 @@ full.df_5$sport<- risk.factor.merger(full.df_5$TG_A_Sport,full.df_5$TG_RF_Sport)
 full.df_6<- full.df_5
 full.df_6<- add.weather(full.df_6,2)
 
+###add daylight data
+full.df_7<- full.df_6
+full.df_7<- add.daylight(full.df_6,2)|>
+  arrange(TG_DateNum)
 ```
 Research Question 1:
 ```{r}
-#create right hand side input matrices. Some dummies are dropped to avoid multicollinearity.
-rhs_Thom_q1<- as.matrix(cbind(ns(full.df_6$thoms_discomfort_index, df = 3),
-                              model.matrix(~as.factor(full.df_6$PraxisID)-1)[,-1],
-                              model.matrix(~as.factor(full.df_6$dow)-1)[,-1],
-                              full.df_6$public_holiday,
-                              full.df_6$school_holiday,
-                              model.matrix(~as.factor(full.df_6$week)-1)[,-1],
-                              model.matrix(~as.factor(full.df_6$month)-1)[,-1],
-                              model.matrix(~as.factor(full.df_6$year)-1)[,-1],
-                              ns(full.df_6$covid_7_day_incidence, df = 3)
+###holdout selection (for hyperparameter tuning)
+
+
+###create right hand side input matrices. Some dummies are dropped to avoid multicollinearity.
+rhs_Thom_q1<- as.data.frame(cbind(full.df_7$thoms_discomfort_index,
+                              model.matrix(~as.factor(full.df_7$PraxisID)-1)[,-1],
+                              model.matrix(~as.factor(full.df_7$dow)-1)[,-1],
+                              full.df_7$public_holiday,
+                              full.df_7$school_holiday,
+                              model.matrix(~as.factor(full.df_7$week)-1)[,-1],
+                              model.matrix(~as.factor(full.df_7$month)-1)[,-1],
+                              model.matrix(~as.factor(full.df_7$year)-1)[,-1],
+                              full.df_7$covid_7_day_incidence
                               ))
-colnames(rhs_Thom_q1)<-c("thoms_discomfort_index_1","thoms_discomfort_index_2","thoms_discomfort_index_3",
+colnames(rhs_Thom_q1)<-c("thoms_discomfort_index",
                          paste0("praxis_", levels(as.factor(full.df_6$PraxisID)))[-1],
                          paste0("dow_", levels(as.factor(full.df_6$dow)))[-1],
                          "public_holiday",
@@ -185,12 +194,17 @@ colnames(rhs_Thom_q1)<-c("thoms_discomfort_index_1","thoms_discomfort_index_2","
                          paste0("week_", levels(as.factor(full.df_6$week)))[-1],
                          paste0("month_", levels(as.factor(full.df_6$month)))[-1],
                          paste0("year_", levels(as.factor(full.df_6$year)))[-1],
-                         "covid_7_day_incidence_1","covid_7_day_incidence_2","covid_7_day_incidence_3")
+                         "covid_7_day_incidence")
 
 
-#estimate age quantiles
-
-
+###estimate age quantiles
+##tune lambda
+tuning.wrapper<- function(lambda_value, alpha_value){
+  elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$age, spline.pos = c(1,85), spline.knots = c(4,5), sel.loss.function = "quantile", sel.quantile = 0.5, alpha = alpha_value, lambda = lambda_value)
+} 
+tuning.wrapper(0.5,0.1)
+library(ParBayesianOptimization)
+trial_bo<- bayesOpt()
 
 ```
 

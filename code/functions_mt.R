@@ -457,6 +457,43 @@ add.covid<- function(df,cdf, no.workers){
   return(out)
 }
 
+add.daylight<- function(fdf,no.workers){
+  fdl<- list()
+  dldl<- list()
+  ids<- unique(fdf$PraxisID)
+  for(i in seq_along(ids)){
+    fdl[[i]]<- fdf|>
+      filter(PraxisID==ids[i])
+    dldl[[i]]<- get(paste0("daylight_",
+                           location_information$location.name[grepl(ids[i],location_information$praxis_ids)]),
+                    envir = .GlobalEnv)
+  }
+  
+  dist.env<- environment()
+  dayl.cluster<- makeCluster(no.workers)
+  clusterExport(cl = dayl.cluster, varlist = c("fdl","dldl"), envir = dist.env)
+  result<- parLapply(dayl.cluster,seq_along(ids),fun = function(k){
+    base.data<- fdl[[k]]
+    daylight.addage<- dldl[[k]]
+    dates<- base.data$TG_DateNum
+    unique.dates<- unique(dates)
+    out<- numeric(length(dates))
+    for(i in seq_along(unique.dates)){
+      selector<- dates==unique.dates[i]
+      out[selector]<- daylight.addage$daylight_hours[daylight.addage$TG_DateNum==unique.dates[i]]
+    }
+    out<- cbind(base.data,out)
+    colnames(out)<- c(colnames(base.data),"daylight_hours")
+    return(out)
+  })
+  
+  out<- result[[1]]
+  for(i in seq(2,length(result))){
+    out<- rbind(out, result[[i]])
+  }
+  return(out)
+}
+
 risk.factor.merger<- function(vec_1, vec_2){
   out<- numeric(length(vec_1))
   for(i in seq_along(vec_1)){
@@ -479,9 +516,49 @@ risk.factor.merger<- function(vec_1, vec_2){
   return(out)
 }
 
-elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.knots=NULL, sel.loss.function, sel.quantile=NULL, alpha, lambda, seed, no.starts=40, no.workers, max.iter=60, step.size=1, tol=1e-6){
+add.last.visit<-function(fdf, no.splits, no.workers){
+  part.dl<- chunk.data(fdf,no.splits)
   
-  set.seed(seed)
+  visit.cluster<- makeCluster(no.workers)
+  dist.env<- environment()
+  clusterExport(cl = visit.cluster, varlist = c("part.dl","arrange"), envir = dist.env)
+  results<- parLapply(cl = visit.cluster, seq(1,no.splits), fun = function(k){
+    df<- part.dl[[k]]|>
+      arrange(uniPatID,diag_class,TG_DateNum)
+    n<- nrow(df)
+    selector<- df$uniPatID[1:(n-1)]==df$uniPatID[2:n] & df$diag_class[1:(n-1)]==df$diag_class[2:n]
+    out<- rep(NA,n)
+    for(i in seq(2,n)[selector]){
+      out[i]<- df$TG_DateNum[i]-df$TG_DateNum[i-1]
+    }
+    return(out)
+  })
+  
+  for(i in seq_along(part.dl)){
+    part.dl[[i]]<- part.dl[[i]]|>
+      arrange(uniPatID,diag_class,TG_DateNum)
+    part.dl[[i]]$last_visit<- results[[i]]
+  }
+  out<- bind_rows(part.dl)
+  return(out)
+}
+
+elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.knots=NULL, sel.loss.function, sel.quantile=NULL, alpha, lambda, no.starts=1, no.workers=2, max.iter=1000, step.size=1, tol=1e-6){
+  #A function which calculates the elastic net estimate of a regression problem with splines using coordinate descent. The regression problems that can be solved are quantile regression and logistic regression (multiclass cross-entropy is currently not supported)
+  #inputdf is a dataframe of variables used to estimate y.
+  #y is the 'dependent' variable
+  #standardize.y can be used to standardize y
+  #spline.pos is a vector which specifies which columns of inputdf are to be estimated with a spline.
+  #spline.knots are the number of knots that are used for each spline. It is a vector, too; the entry on spline.knots corresponds to the entry on spline.pos.
+  #sel.loss.function is the loss function: either "quantile" or "proportion"
+  #alpha is the parameter that shifts between lasso (alpha=0) and Ridge (alpha=1) penalty.
+  #lambda is the regularization parameter: the higher lambda, the more the parameters are shrunk towards 0.
+  #no.starts is the number of starts of the estimation. Usually should be set to 1. For a single start, no. starts will use the ordinary least squares estimates as start values. For more starts, the start values are proportionally shrunk towards 0.
+  #no.workers is the numbers of workers used to calculate the coefficients if more than one start is chosen.
+  #max.iter is the maximum number of iterations.
+  #step.size is the starting length of the step.
+  #tol is a tolerance threshold used in several places: convergence, shrinkage to values close to zero, and step lengths. In these places, numbers below the threshold are considered zero.
+  
   
   #standardize data
   mean.vec<- colMeans(inputdf)
@@ -671,7 +748,6 @@ elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.
     loss.function<- function(beta.vec){
       fitted<- as.numeric(as.matrix(df)%*%beta.vec)
       likelihood<- (1-y)%*%fitted+sum(log(1+exp(-fitted)))
-      #likelihood<- as.numeric((as.matrix(df)%*%beta.vec)%*%(1-y)+sum(log(1+exp(-as.matrix(df)%*%beta.vec))))
       linear.constraint<- 0.5*sum((constraint.matrix%*%beta.vec)^2)
       regularization<- lambda*(alpha*sum(abs(beta.vec))+(1-alpha)*sqrt(sum(beta.vec^2)))
       return(likelihood + linear.constraint+ regularization)
@@ -683,31 +759,31 @@ elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.
       out<- as.numeric(likelihood +linear.constraint +regularization)
       return(out)
     }
-  }else if(sel.loss.function=="cross-entropy"){
-    loss.function<- function(beta.vec){
-      beta.matrix<- matrix(beta.vec,nrow = ncol(df))
-      fitted<- exp(as.matrix(df)%*%beta.matrix)
-      q<- diag(rowSums(fitted)^(-1))%*%fitted
-      y_dummy<- model.matrix(~as.factor(y)+0)
-      likelihood<- sum(y_dummy*q) #sum?
-      linear.constraint<- 0.5*sum((constraint.matrix%*%beta.matrix)^2)
-      regularization<- lambda*(alpha*sum(abs(beta.vec))+(1-alpha)*sqrt(sum(beta.vec^2)))
-      return(likelihood + linear.constraint+ regularization)
-    }
-    loss.gradient<- function(ind, beta.vec){
-      k<- (ind-1) %% ncol(df)+1
-      m<- ((ind-1) %/% ncol(df))+1
-      beta.matrix<- matrix(beta.vec,nrow = ncol(df))
-      fitted<- exp(as.matrix(df)%*%beta.matrix)
-      y_dummy<- model.matrix(~as.factor(y)+0)
-      likelihood_1<- y_dummy[,m]%*%as.matrix(df)[,k]
-      likelihood_2<- sum(t(y_dummy)%*%diag((rowSums(fitted))^(-1))%*%(as.matrix(df)[,k]*fitted[,m]))
-      likelihood<- likelihood_1-likelihood_2
-      linear.constraint<- constraint.matrix[,k]%*% as.numeric(constraint.matrix%*%beta.matrix[,m])
-      regularization<- lambda*(alpha*sign(beta.vec[ind])+(1-alpha)*2*beta.vec[ind]/sqrt(sum((beta.vec)^2)))
-      out<- as.numeric(likelihood +linear.constraint +regularization)
-      return(out)
-    }
+  # }else if(sel.loss.function=="cross-entropy"){
+  #   loss.function<- function(beta.vec){
+  #     beta.matrix<- matrix(beta.vec,nrow = ncol(df))
+  #     fitted<- exp(as.matrix(df)%*%beta.matrix)
+  #     q<- diag(rowSums(fitted)^(-1))%*%fitted
+  #     y_dummy<- model.matrix(~as.factor(y)+0)
+  #     likelihood<- sum(y_dummy*q) #sum?
+  #     linear.constraint<- 0.5*sum((constraint.matrix%*%beta.matrix)^2)
+  #     regularization<- lambda*(alpha*sum(abs(beta.vec))+(1-alpha)*sqrt(sum(beta.vec^2)))
+  #     return(likelihood + linear.constraint+ regularization)
+  #   }
+  #   loss.gradient<- function(ind, beta.vec){
+  #     k<- (ind-1) %% ncol(df)+1
+  #     m<- ((ind-1) %/% ncol(df))+1
+  #     beta.matrix<- matrix(beta.vec,nrow = ncol(df))
+  #     fitted<- exp(as.matrix(df)%*%beta.matrix)
+  #     y_dummy<- model.matrix(~as.factor(y)+0)
+  #     likelihood_1<- y_dummy[,m]%*%as.matrix(df)[,k]
+  #     likelihood_2<- sum(t(y_dummy)%*%diag((rowSums(fitted))^(-1))%*%(as.matrix(df)[,k]*fitted[,m]))
+  #     likelihood<- likelihood_1-likelihood_2
+  #     linear.constraint<- constraint.matrix[,k]%*% as.numeric(constraint.matrix%*%beta.matrix[,m])
+  #     regularization<- lambda*(alpha*sign(beta.vec[ind])+(1-alpha)*2*beta.vec[ind]/sqrt(sum((beta.vec)^2)))
+  #     out<- as.numeric(likelihood +linear.constraint +regularization)
+  #     return(out)
+  #   }
   }
   
   #start values
@@ -717,25 +793,60 @@ elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.
   }else{
     no.params<- ncol(constraint.matrix)
   }
-  for(i in seq(1, no.starts)){
-    beta.list[[i]]<- rnorm(no.params)
-  }
-  browser()
-  #optimization process
-  coordinate.cluster<- makeCluster(no.workers)
-  clusterExport(cl = coordinate.cluster, varlist =  c("beta.list", "loss.function", "loss.gradient", "df", "y", "constraint.matrix", "max.iter", "step.size", "tol"), envir = environment())
   
-  results<- parLapply(cl = coordinate.cluster,seq_along(beta.list), fun = function(z){
-    #results<- lapply(seq_along(beta.list), FUN = function(z){
+  if(ncol(df)>nrow(df)){
+    base.data<- rbind(df,as.matrix(df)[sample(1:nrow(df),ncol(df)-nrow(df)),])
+  }else{
+    base.data<- df
+  }
+  
+  if(sel.loss.function=="quantile"){
+    form<- as.formula(paste("y~0+",paste(colnames(df), sep = "", collapse = "+ ")))
+    beta_start<- rq(formula = form, tau = sel.quantile, data = base.data)$coefficients
+  }else if(sel.loss.function=="proportion"){
+    form<- as.formula(paste("y~0+",paste(colnames(df), sep = "", collapse = "+ ")))
+    beta_start<- glm(formula = form, family = binomial, data = base.data, method = "sfn")$coefficients
+  # }else if(sel.loss.function=="cross-entropy"){
+  #   beta_start<- optim(rnorm(no.params), fn = function(beta.vec){
+  #     beta.matrix<- matrix(beta.vec,nrow = ncol(df))
+  #     fitted<- exp(as.matrix(df)%*%beta.matrix)
+  #     q<- diag(rowSums(fitted)^(-1))%*%fitted
+  #     y_dummy<- model.matrix(~as.factor(y)+0)
+  #     likelihood<- sum(y_dummy*q)
+  #     return(likelihood)
+  #   },
+  #   gr = function(beta.vec){
+  #     k<- (seq(1,length(beta.vec))-1) %% ncol(df)+1
+  #     m<- ((seq(1,length(beta.vec))-1) %/% ncol(df))+1
+  #     beta.matrix<- matrix(beta.vec,nrow = ncol(df))
+  #     fitted<- exp(as.matrix(df)%*%beta.matrix)
+  #     y_dummy<- model.matrix(~as.factor(y)+0)
+  #     likelihood_1<- y_dummy[,m]%*%as.matrix(df)[,k]
+  #     likelihood_2<- sum(t(y_dummy)%*%diag((rowSums(fitted))^(-1))%*%(as.matrix(df)[,k]*fitted[,m]))
+  #     likelihood<- likelihood_1-likelihood_2
+  #     return(likelihood)
+  #   },
+  #   method = "BFGS")
+  }
+  
+  beta.list<- list()
+  for(i in seq(1,no.starts)){
+    beta.list[[i]]<- beta_start*seq(1,0, length.out = no.starts+1)[i]
+  }
+  
+  #optimization process
+  
+  z_fun<- function(z){
     beta_start<- beta.list[[z]]
     ticker<- 1
     convergence<- FALSE
     beta_new<- beta_start
     beta_sugg<- beta_new
     step.vec<- rep(step.size,length(beta_start))
-    while(ticker<=max.iter && !convergence){
+    while(ticker<=max.iter && !convergence && any(step.vec>tol)){
       beta_baseline<- beta_new
-      for(i in seq_along(beta_start)){
+      selected.vars<- seq_along(beta_start)[step.vec>=tol]
+      for(i in selected.vars){
         beta_sugg[i]<- beta_new[i]-step.vec[i]*loss.gradient(i, beta_new)
         while(loss.function(beta_sugg)>loss.function(beta_new)){
           step.vec[i]<- 0.5*step.vec[i]
@@ -758,14 +869,24 @@ elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.
     out.list$beta<- beta_new
     out.list$loss_old<- loss.function(beta_start)
     out.list$loss_new<- loss.function(beta_new)
+    out.list$final_step_length<- step.vec
     out.list$iterations<- ticker-1
     return(out.list)
-  })
+  }
+  
+  if(no.starts>1){
+    coordinate.cluster<- makeCluster(no.workers)
+    clusterExport(cl = coordinate.cluster, varlist =  c("beta.list", "loss.function", "loss.gradient", "df", "y", "constraint.matrix", "max.iter", "step.size", "tol"), envir = environment())
+    results<- parLapply(cl = coordinate.cluster,seq_along(beta.list), fun = z_fun)
+  }else{
+    results<- lapply(seq_along(beta.list), FUN = z_fun)
+  }
   
   out<- list()
   out$converged<- numeric(no.starts)
   out$loss_old<- numeric(no.starts)
   out$loss_new<- numeric(no.starts)
+  out$final_step_length<- matrix(NA,ncol = no.params, nrow = no.starts)
   out$iterations<- numeric(no.starts)
   out$beta<- matrix(NA,ncol = no.params, nrow = no.starts)
   
@@ -774,8 +895,10 @@ elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.
     out$beta[i,]<- results[[i]]$beta
     out$loss_old[i]<- results[[i]]$loss_old
     out$loss_new[i]<- results[[i]]$loss_new
+    out$final_step_length[i,]<- results[[i]]$final_step_length
     out$iterations[i]<- results[[i]]$iterations
   }
+  colnames(out$beta)<- colnames(df)
   
   return(out)
 }
