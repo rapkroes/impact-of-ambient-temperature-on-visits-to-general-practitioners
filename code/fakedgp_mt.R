@@ -1,6 +1,6 @@
 ###Fake Data Generation Process###
 
-art.data<- function(n){
+art.data<- function(n, names.vec){
   #creates a list of data frames with n entries, with entries trying to emulate the original data sets. 
   ID.levels<- seq(1,n/4)
   earliest.date<- date2TG_DateNum("2016-03-01")
@@ -35,14 +35,11 @@ art.data<- function(n){
     DiagTyp=sample(c("D","DD"),n,replace = TRUE, prob = c(0.95,0.05)),
     icd10=sample(icd10_blocks$start_code,n,replace = TRUE)
   )
-  probs<- runif(n)
-  for(i in seq(2,n)){
-    if(probs[i]<=0.1){
-      art.diag$uniPatID[i]<- art.diag$uniPatID[i-1]
-      art.diag$TG_DateNum[i]<- art.diag$TG_DateNum[i-1]
-    }
-  }
+  probs<- runif(n-1)<=0.1
 
+  art.diag$uniPatID[seq(2,n)[probs]]<- art.diag$uniPatID[seq(1,n-1)[probs]]
+  art.diag$TG_DateNum[seq(2,n)[probs]]<- art.diag$TG_DateNum[seq(1,n-1)[probs]]
+  
   art.konsul<- data.frame(
     uniPatID= ID.levels,
     PatID= NA,
@@ -71,19 +68,16 @@ art.data<- function(n){
     verstorben= NA
   )
   
-  
-  return(list(
-    art.diag,art.stamm,art.konsul
-  ))
+  for(i in seq_along(names.vec)){
+    assign(names.vec[i],dl[[i]], envir = .GlobalEnv)
+  }
 }    
 
 names.vec<- c("Diag3","Stamm3","Konsul3")
 
 set.seed(81461650)
-dl<- art.data(10000)
-for(i in seq_along(names.vec)){
-  assign(names.vec[i],dl[[i]])
-}
+art.data(1000000, names.vec)
+
 
 
 

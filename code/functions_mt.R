@@ -543,7 +543,7 @@ add.last.visit<-function(fdf, no.splits, no.workers){
   return(out)
 }
 
-elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.knots=NULL, sel.loss.function, sel.quantile=NULL, alpha, lambda, no.starts=1, no.workers=2, max.iter=1000, step.size=1, tol=1e-6){
+elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.knots=NULL, sel.loss.function, sel.quantile=NULL, alpha, lambda, no.starts=1, no.workers=2, max.iter=1000, step.size=1, lc.rho=1.5, tol=1e-6){
   #A function which calculates the elastic net estimate of a regression problem with splines using coordinate descent. The regression problems that can be solved are quantile regression and logistic regression (multiclass cross-entropy is currently not supported)
   #inputdf is a dataframe of variables used to estimate y.
   #y is the 'dependent' variable
@@ -574,6 +574,7 @@ elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.
   #create new spline data and contraints
   spline.list<- list()
   constraint.list<- list()
+  cut.list<- list()
   if(!is.null(spline.pos)){
     for(i in seq_along(spline.pos)){
       #prepare splines as columns
@@ -586,6 +587,7 @@ elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.
         addage[selector,j]<- spline.data[selector]
       }
       colnames(addage)<- paste0(colnames(df)[spline.pos[i]], seq(1,no.knots+1))
+      cut.list[[i]]<- cuts
       
       #spline constraints
       part.constraint.matrix<- matrix(0,nrow = no.knots*3, ncol = no.knots*4)
@@ -732,14 +734,14 @@ elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.
       residual<- y-as.matrix(df)%*%beta.vec
       positive<- residual>0
       likelihood<- (sum(sel.quantile*residual[positive])+sum((sel.quantile-1)*residual[!positive]))/n
-      linear.constraint<- 0.5*sum((constraint.matrix%*%beta.vec)^2)
+      linear.constraint<- ticker^lc.rho *sqrt(0.5*sum((constraint.matrix%*%beta.vec)^2))/nrow(constraint.matrix)
       regularization<- lambda*(alpha*sum(abs(beta.vec))+(1-alpha)*sqrt(sum(beta.vec^2)))
       return(likelihood + linear.constraint+ regularization)
     }
     loss.gradient<- function(ind,beta.vec){
       dataframe<- as.matrix(df)
       likelihood<- (sel.quantile-1+as.numeric(dataframe%*%beta.vec))%*%dataframe[,ind]/nrow(dataframe)
-      linear.constraint<- constraint.matrix[,ind]%*% (constraint.matrix%*%beta.vec)
+      linear.constraint<- ticker^lc.rho *constraint.matrix[,ind]%*% (constraint.matrix%*%beta.vec) /(tol+nrow(constraint.matrix)*sqrt(2*sum((constraint.matrix%*%beta.vec)^2)))
       regularization<- lambda*(alpha*sign(beta.vec[ind])+(1-alpha)*2*beta.vec[ind]/sqrt(sum((beta.vec)^2)))
       out<- as.numeric(likelihood +linear.constraint +regularization)
       return(out)
@@ -747,14 +749,14 @@ elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.
   }else if(sel.loss.function=="proportion"){
     loss.function<- function(beta.vec){
       fitted<- as.numeric(as.matrix(df)%*%beta.vec)
-      likelihood<- (1-y)%*%fitted+sum(log(1+exp(-fitted)))
-      linear.constraint<- 0.5*sum((constraint.matrix%*%beta.vec)^2)
-      regularization<- lambda*(alpha*sum(abs(beta.vec))+(1-alpha)*sqrt(sum(beta.vec^2)))
+      likelihood<- ((1-y)%*%fitted+sum(log(1+exp(-fitted))))/nrow(df)
+      linear.constraint<- ticker^lc.rho *sqrt(0.5*sum((constraint.matrix%*%beta.vec)^2))/nrow(constraint.matrix)
+      regularization<- lambda*(alpha*sum(abs(beta.vec[1:no.not.spline.params]))+(1-alpha)*sqrt(sum(beta.vec[1:no.not.spline.params]^2)))
       return(likelihood + linear.constraint+ regularization)
     }
     loss.gradient<- function(ind, beta.vec){
-      likelihood<- as.matrix(df)[,ind]%*%((1+exp(-as.matrix(df)%*%beta.vec))^(-1)-y)
-      linear.constraint<- constraint.matrix[,ind]%*% (constraint.matrix%*%beta.vec)
+      likelihood<- as.matrix(df)[,ind]%*%((1+exp(-as.matrix(df)%*%beta.vec))^(-1)-y) /nrow(df)
+      linear.constraint<- ticker^lc.rho *constraint.matrix[,ind]%*% (constraint.matrix%*%beta.vec) /(tol+nrow(constraint.matrix)*sqrt(2*sum((constraint.matrix%*%beta.vec)^2)))
       regularization<- lambda*(alpha*sign(beta.vec[ind])+(1-alpha)*2*beta.vec[ind]/sqrt(sum((beta.vec)^2)))
       out<- as.numeric(likelihood +linear.constraint +regularization)
       return(out)
@@ -802,10 +804,12 @@ elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.
   
   if(sel.loss.function=="quantile"){
     form<- as.formula(paste("y~0+",paste(colnames(df), sep = "", collapse = "+ ")))
-    beta_start<- rq(formula = form, tau = sel.quantile, data = base.data)$coefficients
+    beta_start<- numeric(no.params)
+    beta_start[1:no.not.spline.params]<- rq(formula = form, tau = sel.quantile, data = base.data, method = "fn")$coefficients[1:no.not.spline.params]
   }else if(sel.loss.function=="proportion"){
     form<- as.formula(paste("y~0+",paste(colnames(df), sep = "", collapse = "+ ")))
-    beta_start<- glm(formula = form, family = binomial, data = base.data, method = "sfn")$coefficients
+    beta_start<- numeric(no.params)
+    beta_start[1:no.not.spline.params]<- glm(formula = form, family = binomial, data = base.data)$coefficients[1:no.not.spline.params]
   # }else if(sel.loss.function=="cross-entropy"){
   #   beta_start<- optim(rnorm(no.params), fn = function(beta.vec){
   #     beta.matrix<- matrix(beta.vec,nrow = ncol(df))
@@ -853,11 +857,12 @@ elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.
           beta_sugg[i]<- beta_new[i]-step.vec[i]*loss.gradient(i, beta_new)
         }
         if(abs(beta_sugg[i])<=tol){
-          beta_round<- beta_sugg
-          beta_round[i]<- 0
-          if(loss.function(beta_round)<=loss.function(beta_sugg)){
-            beta_sugg<- beta_round
-          }
+          # beta_round<- beta_sugg
+          # beta_round[i]<- 0
+          # if(loss.function(beta_round)<=loss.function(beta_sugg)){
+          #   beta_sugg<- beta_round
+          # }
+          beta_sugg[i]<- 0
         }
         beta_new<- beta_sugg
       }
@@ -899,6 +904,12 @@ elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.
     out$iterations[i]<- results[[i]]$iterations
   }
   colnames(out$beta)<- colnames(df)
+  
+  for(i in seq_along(cut.list)){
+    old.names<- names(out)
+    out$im<- cut.list[[i]]
+    names(out)<- c(old.names,paste0("cuts_",i))
+  }
   
   return(out)
 }

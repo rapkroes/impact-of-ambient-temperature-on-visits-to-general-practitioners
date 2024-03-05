@@ -1168,7 +1168,7 @@ elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.
   }else{
     base.data<- df
   }
-  
+  browser()
   if(sel.loss.function=="quantile"){
     form<- as.formula(paste("y~0+",paste(colnames(df), sep = "", collapse = "+ ")))
     beta_start<- rq(formula = form, tau = sel.quantile, data = base.data)$coefficients

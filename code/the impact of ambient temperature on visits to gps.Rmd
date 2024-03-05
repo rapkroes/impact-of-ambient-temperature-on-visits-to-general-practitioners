@@ -69,8 +69,8 @@ for(i in seq_along(location.name)){
     filter(TG_DateNum>=date.range[1]-21 & TG_DateNum<=date.range[2])
   im$temperature_kelvin<- im$temperature_celsius +273.16
   
-  assign(paste0("wetter_",location.name[i]),im)
   weatherdata.transformation(im,sel.quantile = .95, loc = location.name[i], dr = date.range)
+  #assign(paste0("wetter_",location.name[i]),im)
 }
 
 
@@ -181,7 +181,7 @@ rhs_Thom_q1<- as.data.frame(cbind(full.df_7$thoms_discomfort_index,
                               model.matrix(~as.factor(full.df_7$dow)-1)[,-1],
                               full.df_7$public_holiday,
                               full.df_7$school_holiday,
-                              model.matrix(~as.factor(full.df_7$week)-1)[,-1],
+                              #model.matrix(~as.factor(full.df_7$week)-1)[,-1],
                               model.matrix(~as.factor(full.df_7$month)-1)[,-1],
                               model.matrix(~as.factor(full.df_7$year)-1)[,-1],
                               full.df_7$covid_7_day_incidence
@@ -191,20 +191,165 @@ colnames(rhs_Thom_q1)<-c("thoms_discomfort_index",
                          paste0("dow_", levels(as.factor(full.df_6$dow)))[-1],
                          "public_holiday",
                          "school_holiday",
-                         paste0("week_", levels(as.factor(full.df_6$week)))[-1],
+                         #paste0("week_", levels(as.factor(full.df_6$week)))[-1],
                          paste0("month_", levels(as.factor(full.df_6$month)))[-1],
                          paste0("year_", levels(as.factor(full.df_6$year)))[-1],
-                         "covid_7_day_incidence")
+                         "covid_7_day_incidence"
+                         )
 
 
 ###estimate age quantiles
 ##tune lambda
 tuning.wrapper<- function(lambda_value, alpha_value){
-  elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$age, spline.pos = c(1,85), spline.knots = c(4,5), sel.loss.function = "quantile", sel.quantile = 0.5, alpha = alpha_value, lambda = lambda_value)
+  elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$age, spline.pos = c(1,ncol(rhs_Thom_q1)), spline.knots = c(4,5), sel.loss.function = "quantile", sel.quantile = 0.5, alpha = alpha_value, lambda = lambda_value)
 } 
+tic()
+age.6.1000<- elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$age, spline.pos = 1, spline.knots = 4, sel.loss.function = "quantile", sel.quantile = 0.5, alpha = .1, lambda = .5, tol = 1e-6, max.iter = 1000, lc.rho = 2)
+toc()
+tic()
+age.6.75<- elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$age, spline.pos = 1, spline.knots = 4, sel.loss.function = "quantile", sel.quantile = 0.5, alpha = .1, lambda = .5, tol = 1e-6, max.iter = 75, lc.rho = 2)
+toc()
+
+
+
+
+tic()
+attempt.p.6.1000<- elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$female, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .5, tol = 1e-6, max.iter = 1000)
+toc()
+tic()
+elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$female, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .5, tol = 1e-6, max.iter = 100)
+toc()
+tic()
+elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$female, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .5, tol = 1e-4, max.iter = 100)
+toc()
+
+
+tic()
+attempt.p.4.75<- elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$female, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .5, tol = 1e-4, max.iter = 75)
+toc()
+tic()
+attempt.p.5.75<- elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$female, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .5, tol = 1e-5, max.iter = 75)
+toc()
+tic()
+attempt.p.6.75<- elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$female, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .5, tol = 1e-6, max.iter = 75)
+toc()
+
 tuning.wrapper(0.5,0.1)
 library(ParBayesianOptimization)
 trial_bo<- bayesOpt()
+
+```
+```{r}
+# plot effect of TDI
+tdi.effect<- function(x,beta,cuts){
+  params<- as.vector(beta[grepl("thoms_discomfort_index",colnames(beta))])
+  names(params)<- colnames(beta)[grepl("thoms_discomfort_index",colnames(beta))]
+  for(i in seq_along(params)){
+    varname<- substr(names(params)[i],nchar(names(params)[i])-2,nchar(names(params)[i]))
+    assign(varname,params[i])
+  }
+  out<- numeric(length(x))
+  cuts_abridged<- cuts[2:(length(cuts)-1)]
+  for(i in seq_along(out)){
+    if(x[i]<min(cuts_abridged)){
+      out[i]<- a_1*x[i]+b_1
+    }else if(x[i]>max(cuts_abridged)){
+      no<- length(cuts)-1
+      out[i]<- get(paste0("a_",no))*x[i]+get(paste0("b_",no))
+    }else{
+      no<- 1+sum(x[i]>=cuts_abridged)
+      out[i]<- get(paste0("a_",no))*x[i]^3+get(paste0("b_",no))*x[i]^2+get(paste0("c_",no))*x[i]+get(paste0("d_",no))
+    }
+  }
+  return(out)
+}
+grid<- seq(-3.2,2.1, length.out=1000)
+effect_1<- tdi.effect(grid, attempt.p.4.75$beta,attempt.p.4.75$cuts_1)
+effect_2<- tdi.effect(grid, attempt.p.5.75$beta,attempt.p.4.75$cuts_1)
+effect_3<- tdi.effect(grid, attempt.p.6.75$beta,attempt.p.4.75$cuts_1)
+plot(effect_1~grid, type="l", ylim= c(-31,5))
+plot(effect_1~grid, type="l", ylim= c(-31,5))+
+  abline(v=attempt.p.4.75$cuts_1)
+plot(effect_2~grid, type="l", ylim= c(-31,5))
+plot(effect_2~grid, type="l", ylim= c(-31,5))+
+  abline(v=attempt.p.4.75$cuts_1)
+plot(effect_3~grid, type="l", ylim= c(-31,5))
+plot(effect_3~grid, type="l", ylim= c(-31,5))+
+  abline(v=attempt.p.4.75$cuts_1)
+t(rbind(attempt.p.4.75$beta,attempt.p.5.75$beta,attempt.p.6.75$beta))
+
+effect_4<- tdi.effect(grid, age.6.1000$beta,age_1$cuts_1)
+effect_5<- tdi.effect(grid, age.6.75$beta,age_1$cuts_1)
+plot(effect_4~grid, type="l")
+plot(effect_5~grid, type="l")
+```
+
+
+
+
+
+
+```{r}
+#simulate if it works
+
+set.seed(561351)
+param.sim_1<- rt(ncol(rhs_Thom_q1),8)
+var.sim_1<- as.vector(round(1/(1+exp(-1*as.matrix(rhs_Thom_q1)%*%param.sim_1+rt(nrow(rhs_Thom_q1),9)))))
+names(param.sim_1)<- colnames(rhs_Thom_q1)
+
+res.sim_1<- elastic.net(rhs_Thom_q1,var.sim_1, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .1, tol = 1e-6, max.iter = 75)
+
+param.sim_1
+res.sim_1$beta
+
+n_mc<- 50
+bootstrap.params<- matrix(0,nrow = n_mc,ncol = 49)
+for(i in 1:n_mc){
+  selector<- sample(1:nrow(rhs_Thom_q1),nrow(rhs_Thom_q1), replace = TRUE)
+  bootstrap.sample<- rhs_Thom_q1[selector,]
+  bootstrap.params[i,]<- elastic.net(bootstrap.sample,var.sim_1[selector], spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .1, tol = 1e-6, max.iter = 75)$beta
+}
+colnames(bootstrap.params)<- colnames(res.sim_1$beta)
+
+min.vec<- apply(bootstrap.params,2,min)[1:33]
+max.vec<- apply(bootstrap.params,2,max)[1:33]
+base<- c(param.sim_1[2:33],0)
+found.within<- base>=min.vec & base<=max.vec
+cbind(min.vec,max.vec,base,found.within)
+
+
+####################sim 2####################################
+set.seed(561351)
+param.sim_2<- rt(ncol(rhs_Thom_q1),8)
+ict<-rt(1,8)
+var.sim_2<- as.vector(round(1/(1+exp(-1*as.matrix(rhs_Thom_q1)%*%param.sim_1+ict+rnorm(nrow(rhs_Thom_q1))))))
+names(param.sim_1)<- colnames(rhs_Thom_q1)
+
+res.sim_2<- elastic.net(rhs_Thom_q1,var.sim_1, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .1, tol = 1e-6, max.iter = 75)
+
+param.sim_2
+res.sim_2$beta
+
+n_mc<- 50
+bootstrap.params<- matrix(0,nrow = n_mc,ncol = 49)
+sim.cluster<- makeCluster(3)
+clusterExport(sim.cluster, varlist = c("elastic.net","rhs_Thom_q1","var.sim_2"))
+bootstrap.params_2<- parLapply(sim.cluster,1:n_mc,fun = function(k){
+  set.seed(k)
+  selector<- sample(1:nrow(rhs_Thom_q1),nrow(rhs_Thom_q1), replace = TRUE)
+  bootstrap.sample<- rhs_Thom_q1[selector,]
+  out<- elastic.net(bootstrap.sample,var.sim_2[selector], spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = 0, tol = 1e-6, max.iter = 75)$beta
+  return(out)
+})
+b.params_2<- do.call(rbind, bootstrap.params_2)
+
+
+min.vec<- apply(b.params_2,2,min)[1:33]
+max.vec<- apply(b.params_2,2,max)[1:33]
+median.vec<- apply(b.params_2,2,median)[1:33]
+base<- param.sim_2[2:34]
+found.within<- base>=min.vec & base<=max.vec
+cbind(min.vec,max.vec,base,median.vec,found.within)
 
 ```
 
