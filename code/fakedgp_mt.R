@@ -68,12 +68,10 @@ art.data<- function(n, names.vec){
     verstorben= NA
   )
   
-  for(i in seq_along(names.vec)){
-    assign(names.vec[i],dl[[i]], envir = .GlobalEnv)
-  }
+  assign("Diag3", art.diag, envir = .GlobalEnv)
+  assign("Stamm3", art.stamm, envir = .GlobalEnv)
+  assign("Konsul3", art.konsul, envir = .GlobalEnv)
 }    
-
-names.vec<- c("Diag3","Stamm3","Konsul3")
 
 set.seed(81461650)
 art.data(5000000, names.vec)
