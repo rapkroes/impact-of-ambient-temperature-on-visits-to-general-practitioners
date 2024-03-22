@@ -76,7 +76,7 @@ art.data<- function(n, names.vec){
 names.vec<- c("Diag3","Stamm3","Konsul3")
 
 set.seed(81461650)
-art.data(1000000, names.vec)
+art.data(5000000, names.vec)
 
 
 

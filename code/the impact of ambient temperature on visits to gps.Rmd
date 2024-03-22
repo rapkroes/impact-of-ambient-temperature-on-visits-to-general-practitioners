@@ -13,7 +13,7 @@ library(readxl)
 library(lubridate)
 library(dplyr)
 library(parallel)
-library(quantreg)
+#library(quantreg)
 library(lightgbm)
 library(VGAM)
 ```
@@ -174,106 +174,7 @@ full.df_7<- add.daylight(full.df_6,2)|>
 ```
 Research Question 1:
 ```{r}
-###holdout selection (for hyperparameter tuning)
 
-
-###create right hand side input matrices. Some dummies are dropped to avoid multicollinearity.
-rhs_Thom_q1<- as.data.frame(cbind(full.df_7$TG_DateNum,
-                                  full.df_7$thoms_discomfort_index,
-                                  model.matrix(~as.factor(full.df_7$PraxisID)-1)[,-1],
-                                  model.matrix(~as.factor(full.df_7$dow)-1)[,-1],
-                                  full.df_7$public_holiday,
-                                  full.df_7$school_holiday,
-                                  model.matrix(~as.factor(full.df_7$week_of_month))[,-1],
-                                  model.matrix(~as.factor(full.df_7$month)-1)[,-1],
-                                  model.matrix(~as.factor(full.df_7$year)-1)[,-1],
-                                  full.df_7$covid_7_day_incidence
-                                  ))
-colnames(rhs_Thom_q1)<-c("TG_DateNum",
-                         "thoms_discomfort_index",
-                         paste0("praxis_", levels(as.factor(full.df_6$PraxisID)))[-1],
-                         paste0("dow_", levels(as.factor(full.df_6$dow)))[-1],
-                         "public_holiday",
-                         "school_holiday",
-                         paste0("week_", levels(as.factor(full.df_6$week_of_month)))[-1],
-                         paste0("month_", levels(as.factor(full.df_6$month)))[-1],
-                         paste0("year_", levels(as.factor(full.df_6$year)))[-1],
-                         "covid_7_day_incidence"
-                         )
-rhs_heatwave_q1<- as.data.frame(cbind(full.df_7$TG_DateNum,
-                                  full.df_7$length_heatwave,
-                                  model.matrix(~as.factor(full.df_7$PraxisID)-1)[,-1],
-                                  model.matrix(~as.factor(full.df_7$dow)-1)[,-1],
-                                  full.df_7$public_holiday,
-                                  full.df_7$school_holiday,
-                                  model.matrix(~as.factor(full.df_7$week_of_month))[,-1],
-                                  model.matrix(~as.factor(full.df_7$month)-1)[,-1],
-                                  model.matrix(~as.factor(full.df_7$year)-1)[,-1],
-                                  full.df_7$covid_7_day_incidence
-                                  ))
-
-colnames(rhs_heatwave_q1)<-c("TG_DateNum",
-                         "length_heatwave",
-                         paste0("praxis_", levels(as.factor(full.df_6$PraxisID)))[-1],
-                         paste0("dow_", levels(as.factor(full.df_6$dow)))[-1],
-                         "public_holiday",
-                         "school_holiday",
-                         paste0("week_", levels(as.factor(full.df_6$week_of_month)))[-1],
-                         paste0("month_", levels(as.factor(full.df_6$month)))[-1],
-                         paste0("year_", levels(as.factor(full.df_6$year)))[-1],
-                         "covid_7_day_incidence"
-                         )
-
-rhs_sdi_q1<- as.data.frame(cbind(full.df_7$TG_DateNum,
-                                  model.matrix(~as.factor(full.df_7$PraxisID)-1)[,-1],
-                                  model.matrix(~as.factor(full.df_7$dow)-1)[,-1],
-                                  full.df_7$public_holiday,
-                                  full.df_7$school_holiday,
-                                  model.matrix(~as.factor(full.df_7$week_of_month))[,-1],
-                                  model.matrix(~as.factor(full.df_7$month)-1)[,-1],
-                                  model.matrix(~as.factor(full.df_7$year)-1)[,-1],
-                                  full.df_7$covid_7_day_incidence
-                                  ))
-
-colnames(rhs_sdi_q1)<-c("TG_DateNum",
-                         paste0("praxis_", levels(as.factor(full.df_6$PraxisID)))[-1],
-                         paste0("dow_", levels(as.factor(full.df_6$dow)))[-1],
-                         "public_holiday",
-                         "school_holiday",
-                         paste0("week_", levels(as.factor(full.df_6$week_of_month)))[-1],
-                         paste0("month_", levels(as.factor(full.df_6$month)))[-1],
-                         paste0("year_", levels(as.factor(full.df_6$year)))[-1],
-                         "covid_7_day_incidence"
-                         )
-
-col.selector_sdi<- grepl("temperature",colnames(full.df_7)) | grepl("humidity",colnames(full.df_7))
-addage_sdi_q1<- full.df_7[,col.selector_sdi]
-
-########add daylight???
-
-im_2<- wrapper.brt_default(c(.1,10L),rhs_Thom_q1,full.df_7$age)
-
-
-# hyperparameter optimization
-n.folds<- 5
-tuning.its<- 3
-#5 folds, 3 its: approx. 4 min per optimization
-
-set.seed(840606)
-hyper.pars_Thom_q1_age<- optim(par = c(0,log(9),log(10)), fn = tuning.Thom_q1_age, method = "SANN", control = list(maxit=tuning.its))
-hyper.pars_Thom_q1_gender<- optim(par = c(0,log(9),log(10)), fn = tuning.Thom_q1_gender, method = "SANN", control = list(maxit=tuning.its))
-hyper.pars_Thom_q1_phi<- optim(par = c(0,log(9),log(10)), fn = tuning.Thom_q1_phi, method = "SANN", control = list(maxit=tuning.its))
-hyper.pars_Thom_q1_chronic<- optim(par = c(0,log(9),log(10)), fn = tuning.Thom_q1_chronic, method = "SANN", control = list(maxit=tuning.its))
-save(hyper.pars_Thom_q1_age,hyper.pars_Thom_q1_gender,hyper.pars_Thom_q1_phi,hyper.pars_Thom_q1_chronic,file = "hyperpars_Thom_q1.RData")
-
-set.seed(840606)
-hyper.pars_hw_q1_age<- optim(par = c(0,log(9),log(10)), fn = tuning.hw_q1_age, method = "SANN", control = list(maxit=tuning.its))
-hyper.pars_hw_q1_gender<- optim(par = c(0,log(9),log(10)), fn = tuning.hw_q1_gender, method = "SANN", control = list(maxit=tuning.its))
-hyper.pars_hw_q1_phi<- optim(par = c(0,log(9),log(10)), fn = tuning.hw_q1_phi, method = "SANN", control = list(maxit=tuning.its))
-hyper.pars_hw_q1_chronic<- optim(par = c(0,log(9),log(10)), fn = tuning.hw_q1_chronic, method = "SANN", control = list(maxit=tuning.its))
-
-########SDI. However, only linear effect permitted
-########change chronic from proportion to quantile
 ```
 
 
