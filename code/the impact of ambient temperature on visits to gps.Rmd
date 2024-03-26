@@ -113,7 +113,7 @@ Merging and transformation process, using Diag as baseline:
 6. Create risk factors variables
 ```{r}
 ### save workspace image regularily?
-make.saves<- TRUE
+make.saves<- FALSE
 
 ### acute and chronic diseases, last visit
 chronic.sel<- grepl("DD",Diag3$DiagTyp)
@@ -123,11 +123,11 @@ chronic.df<- data.frame(uniPatID = Diag3$uniPatID[chronic.sel],
 chronic.df$diag_category<- icd10.to.class(chronic.df$diag_category)
 full.df_1<- add.chronic(Diag3[!chronic.sel,], chronic.df)
 full.df_1$diag_class<- icd10.to.class(full.df_1$icd10)
-full.df_1.1<- add.last.visit(full.df_1, no.splits = 50, no.workers = 2)
+full.df_1.1<- add.last.visit(full.df_1, no.splits = 50, no.workers = 4)
 if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
 
 ### stamm data
-full.df_1.2<- add.stamm.new.par(full.df_1.1,Stamm3,no.splits = 50, no.workers = 2)
+full.df_1.2<- add.stamm.new.par(full.df_1.1,Stamm3,no.splits = 50, no.workers = 4)
 # gender variable
 gender.selector<- full.df_1.2$Weibl==1 | full.df_1.2$Maennl==1 | full.df_1.2$stamm.is.there==0
 full.df_1.2$female<- full.df_1.2$Weibl
@@ -140,7 +140,7 @@ full.df_1.3$landkreis<- praxisID2location(full.df_1.3$PraxisID)
 if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
 
 ### konsul
-full.df_2<- add.konsul(full.df_1.3, Konsul3, no.splits = 50, no.workers = 2)
+full.df_2<- add.konsul(full.df_1.3, Konsul3, no.splits = 50, no.workers = 4)
 col.selector<- !duplicated(colnames(full.df_2))
 full.df_2.2<- full.df_2[,col.selector]
 if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
@@ -161,7 +161,7 @@ full.df_4<- full.df_3
 full.df_4$Landkreis_id<- praxis_id2landkreis_id(full.df_4$PraxisID)
 full.df_4<- full.df_4|>
   arrange(Landkreis_id,TG_DateNum)
-full.df_4.2<- add.covid(full.df_4,covid.data,2)
+full.df_4.2<- add.covid(full.df_4,covid.data, no.workers = 4)
 full.df_4.2$covid_positive_incidence<- full.df_4.2$covid_7_day_incidence>0
 if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
 
@@ -174,20 +174,26 @@ if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), f
 
 ### add weather variables
 full.df_6<- full.df_5
-full.df_6<- add.weather(full.df_6,2)
+full.df_6<- add.weather(full.df_6, no.workers = 4)
 if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
 
 ###add daylight data
 full.df_7<- full.df_6
-full.df_7<- add.daylight(full.df_6,2)|>
+full.df_7<- add.daylight(full.df_6, no.workers = 4)|>
   arrange(TG_DateNum)
-if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
+if(make.saves){
+  save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
+  write.csv2(full.df_7, file = "final_df.csv", row.names = FALSE)
+}
 ```
 Research Question 1:
 ```{r}
 
 ```
 
+```{r}
+
+```
 
 ```{r}
 ###estimate age quantiles

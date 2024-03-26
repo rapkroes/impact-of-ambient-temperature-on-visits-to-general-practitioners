@@ -1655,3 +1655,43 @@ tuning.hw_q1_chronic<- function(pars){
   
   return(sum(loss.vec))
 }
+
+df_qx<- function(inputdf = full.df_7, di, q){
+  # creates a data frame for research question 1 or 2 with a specified discomfort index.
+  # inputdf is the data frame from which the variables are extracted
+  # di is the discomfort index. It is either "TDI" for Thom's discomfort index, "HW" for the length of heatwave, or "SDI" for the suggested discomfort index
+  # q specifies the research question- either it takes the value 1 or 2.
+  if(di=="TDI"){
+    out<- data.frame(thoms_discomfort_index = inputdf$thoms_discomfort_index)
+  }else if(di=="HW"){
+    out<- data.frame(length_heatwave = inputdf$length_heatwave)
+  }else if(di=="SDI"){
+    out<- inputdf[,grepl("temperature", colnames(inputdf)) | grepl("humidity", colnames(inputdf))]
+  }
+  
+  out$PraxisID<- inputdf$PraxisID
+  out$dow<- inputdf$dow
+  out$public_holiday<- inputdf$public_holiday
+  out$school_holiday<- inputdf$school_holiday
+  out$week_of_month<- inputdf$week_of_month
+  out$month<- inputdf$month
+  out$year<- inputdf$year
+  out$daylight_hours<- inputdf$daylight_hours
+  out$covid_7_day_incidence<- inputdf$covid_7_day_incidence
+  
+  if(q==2){
+    out$age<- full.df_7$age
+    out$female<- full.df_7$female
+    out$PKV<- full.df_7$PKV
+    out$smoking<- full.df_7$smoking
+    out$alcohol<- full.df_7$alcohol
+    out$sport<- full.df_7$sport
+    
+    chronic.selector<- grepl("chronic", colnames(inputdf))
+    addage<- inputdf[,chronic.selector]
+    colnames(addage)<- colnames(inputdf)[chronic.selector]
+    out<- cbind(out,addage)
+  }
+  
+  return(out)
+}
