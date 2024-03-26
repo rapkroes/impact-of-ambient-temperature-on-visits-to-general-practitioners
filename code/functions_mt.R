@@ -416,15 +416,85 @@ SDI<- function(df,w,theta,rho,tau){
   return(out)
 }
 
+# add.chronic<- function(diagdf,chronicdf){
+#   addage<- as(matrix(0,nrow = nrow(diagdf),ncol = 11), "sparseMatrix")
+#   pb<- txtProgressBar(min = 0, max = nrow(chronicdf), initial = 0)
+#   for(i in seq(1,nrow(chronicdf))){
+#     row.selector<- diagdf$uniPatID==chronicdf[i,1]
+#     addage[row.selector,chronicdf[i,2]]<- addage[row.selector,chronicdf[i,2]]+1
+#     setTxtProgressBar(pb,i)
+#   }
+#   addage<- as.data.frame(addage)
+#   colnames(addage)<- paste0(rep("chronic_",11),1:11)
+#   no_all_chronic_diseases<- rowSums(addage)
+#   addage$no_all_chronic_diseases<- no_all_chronic_diseases
+#   out<- cbind(diagdf,addage)
+#   return(out)
+# }
+# add.chronic<- function(diagdf,chronicdf){
+#   chronicdf<- chronicdf|>
+#     group_by(uniPatID, diag_category)|>
+#     mutate(counts = n())|>
+#     distinct()|>
+#     ungroup()
+#   addage<- matrix(0,nrow = nrow(diagdf),ncol = 11)
+#   pb<- txtProgressBar(min = 0, max = nrow(chronicdf), initial = 0)
+#   for(i in seq(1,nrow(chronicdf))){
+#     row.selector<- which(diagdf$uniPatID==as.numeric(chronicdf[i,1]))
+#     addage[row.selector,as.numeric(chronicdf[i,2])]<- as.numeric(chronicdf[i,3])
+#     setTxtProgressBar(pb,i)
+#   }
+#   addage<- as.data.frame(addage)
+#   colnames(addage)<- paste0(rep("chronic_",11),1:11)
+#   no_all_chronic_diseases<- rowSums(addage)
+#   addage$no_all_chronic_diseases<- no_all_chronic_diseases
+#   out<- cbind(diagdf,addage)
+#   return(out)
+# }
+# add.chronic<- function(diagdf,chronicdf){
+#   chronicdf<- chronicdf|>
+#     group_by(uniPatID, diag_category)|>
+#     mutate(counts = n())|>
+#     distinct()|>
+#     ungroup()
+#   addage<- matrix(0,nrow = nrow(diagdf),ncol = 11)
+#   pb<- txtProgressBar(min = 0, max = nrow(chronicdf), initial = 0)
+#   for(i in seq(1,nrow(chronicdf))){
+#     row.selector<- which(diagdf$uniPatID==as.numeric(chronicdf[i,1]))
+#     addage[row.selector,as.numeric(chronicdf[i,2])]<- as.numeric(chronicdf[i,3])
+#     setTxtProgressBar(pb,i)
+#   }
+#   addage<- as.data.frame(addage)
+#   colnames(addage)<- paste0(rep("chronic_",11),1:11)
+#   no_all_chronic_diseases<- rowSums(addage)
+#   addage$no_all_chronic_diseases<- no_all_chronic_diseases
+#   out<- cbind(diagdf,addage)
+#   return(out)
+# }
 add.chronic<- function(diagdf,chronicdf){
-  addage<- as.data.frame(matrix(0,nrow = nrow(diagdf),ncol = 11))
-  colnames(addage)<- paste0(rep("chronic_",11),1:11)
+  chronicdf<- chronicdf|>
+    group_by(uniPatID, diag_category)|>
+    mutate(counts = n())|>
+    distinct()|>
+    ungroup()
+  pb<- txtProgressBar(min = 0, max = nrow(chronicdf), initial = 0)
+  row.list<- list()
+  column.list<- list()
+  value.list<- list()
   for(i in seq(1,nrow(chronicdf))){
-    row.selector<- diagdf$uniPatID==chronicdf[i,1]
-    addage[row.selector,chronicdf[i,2]]<- addage[row.selector,chronicdf[i,2]]+1
+    row.list[[i]]<- which(diagdf$uniPatID==as.numeric(chronicdf[i,1]))
+    column.list[[i]]<- rep(as.numeric(chronicdf[i,2]), length(row.list[[i]]))
+    value.list[[i]]<- rep(as.numeric(chronicdf[i,3]), length(row.list[[i]]))
+    setTxtProgressBar(pb,i)
   }
-  no_all_chronic_diseases<- rowSums(addage)
-  addage$no_all_chronic_diseases<- no_all_chronic_diseases
+  addage<- as.data.frame(as.matrix(sparseMatrix(i = unlist(row.list),
+                                      j = unlist(column.list),
+                                      x = unlist(value.list))))
+  if(nrow(addage)<nrow(diagdf)){
+    addage<- rbind(addage, matrix(0,nrow = nrow(diagdf)-nrow(addage), ncol = ncol(addage)))
+  }
+  colnames(addage)<- paste0(rep("chronic_",11),1:11)
+  addage$no_all_chronic_diseases<- rowSums(addage)
   out<- cbind(diagdf,addage)
   return(out)
 }

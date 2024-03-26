@@ -1,6 +1,6 @@
 ###Fake Data Generation Process###
 
-art.data<- function(n, names.vec){
+art.data<- function(n){
   #creates a list of data frames with n entries, with entries trying to emulate the original data sets. 
   ID.levels<- seq(1,n/4)
   earliest.date<- date2TG_DateNum("2016-03-01")
@@ -74,7 +74,7 @@ art.data<- function(n, names.vec){
 }    
 
 set.seed(81461650)
-art.data(5000000, names.vec)
+art.data(100000)
 
 
 
