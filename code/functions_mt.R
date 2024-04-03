@@ -1695,3 +1695,8 @@ df_qx<- function(inputdf = full.df_7, di, q){
   
   return(out)
 }
+
+stoch.round<- function(x){
+  # implementation of stochastic rounding to integer for purposes of hyperparameter tuning
+  floor(x)+ runif(length(x))<=(x-floor(x))
+}

@@ -1,18 +1,22 @@
 #####default wrapper
 
-wrapper_default<- function(hyperpars,inputdf, y, est.type, cv = 5, no.trees = 100,
-                           sdi = FALSE, gpu = FALSE, no.threads = 4,  seed = NA){
+wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth, 
+                           min.data.in.leaf, feature.fraction, 
+                           extra.trees = FALSE, top.rate, other.rate,
+                           cat.smooth, path.smooth, inputdf, y, est.type, 
+                           cv = 5L, no.trees = 100L, no.threads = 4L, 
+                           early.stopping = 10L,  seed = NA){
   # default wrapper for cross-validation of the model.
   # hyperpars:
   # 1. learning rate (>0)
   # 2. num_leaves (integer >0)
   # if sdi = TRUE
-  # 3. number of lags/ size for the weights of sdi
-  # 4. alpha/ shape parameter 1 for the weights of sdi
-  # 5. beta/ shape parameter 2 for the weights of sdi
-  # 6.-8. theta values for the daily temperature of the sdi
-  # 9.-11. rho values for the daily humidity of the sdi
-  # 12. tau value for the daily interaction between temperature and humidity
+  # sdi[1] number of lags/ size for the weights of sdi
+  # sdi[2] alpha/ shape parameter 1 for the weights of sdi
+  # sdi[3] beta/ shape parameter 2 for the weights of sdi
+  # sdi[4:6] theta values for the daily temperature of the sdi
+  # sdi[7:9] rho values for the daily humidity of the sdi
+  # sdi[10] tau value for the daily interaction between temperature and humidity
   
   if(est.type=="quantile"){
     lossfct<- "quantile"
@@ -26,10 +30,10 @@ wrapper_default<- function(hyperpars,inputdf, y, est.type, cv = 5, no.trees = 10
                 "daylight_hours", "covid_7_day_incidence", "age", 
                 colnames(inputdf)[grep("chronic", colnames(inputdf))])
   if(isTRUE(sdi)){
-    sdi.weights<- dbetabinom.ab(x = seq(0,hyperpars[3]), size = hyperpars[3],
-                                shape1 = hyperpars[4], shape2 = hyperpars[5])
-    sdi.vec<- SDI(df = inputdf, w = sdi.weights, theta = hyperpars[6:8],
-                  rho = hyperpars[9:11], tau = hyperpars[12])
+    sdi.weights<- dbetabinom.ab(x = seq(0,sdi[1]), size = sdi[1],
+                                shape1 = sdi[2], shape2 = sdi[3])
+    sdi.vec<- SDI(df = inputdf, w = sdi.weights, theta = sdi[4:6],
+                  rho = sdi[7:9], tau = sdi[10])
     
     col.selector<- grepl("temperature", colnames(inputdf)) | grepl("humidity", colnames(inputdf))
     im<- cbind(inputdf[,!col.selector],sdi.vec)
@@ -39,15 +43,11 @@ wrapper_default<- function(hyperpars,inputdf, y, est.type, cv = 5, no.trees = 10
     df<- lgb.Dataset(data = im,
                      categorical_feature = factor.vars)
   }else{
-    factor.vars<- colnames(im)[!colnames(im) %in% blacklist]
+    factor.vars<- colnames(inputdf)[!colnames(inputdf) %in% blacklist]
     df<- lgb.Dataset(data.matrix(inputdf),
                      categorical_feature = factor.vars)
   }
   
-  processing.unit<- "cpu"
-  if(isTRUE(gpu)){
-    processing.unit<- "gpu"
-  }
   
   if(!is.na(seed)){
     set.seed(seed)
@@ -56,17 +56,38 @@ wrapper_default<- function(hyperpars,inputdf, y, est.type, cv = 5, no.trees = 10
   parameters<- list(objective = est.type, data_sample_strategy = "goss", 
                     num_trees = no.trees,
                     num_threads = no.threads,
-                    learning_rate = hyperpars[1], num_leaves = hyperpars[2],
-                    device_type = processing.unit,
+                    learning_rate = lr, num_leaves = no.leaves,
                     use_missing = TRUE,
-                    zero_as_missing = FALSE)
-  
+                    zero_as_missing = FALSE,
+                    max_depth = max.depth,
+                    min_data_in_leaf = min.data.in.leaf,
+                    feature_fraction = feature.fraction,
+                    extra_trees = extra.trees,
+                    top_rate = top.rate,
+                    other_rate = other.rate,
+                    cat_smooth = cat.smooth,
+                    path_smooth = path.smooth)
+
   results<- lgb.cv(params = parameters, data = df,nrounds = no.trees,
                    label = y, obj = est.type,verbose = 1, record = TRUE,
-                   nfold = cv, early_stopping_rounds = 20L,
+                   nfold = cv, early_stopping_rounds = early.stopping,
                    eval = lossfct)
   return(results)
 }
+sim_1<- wrapper_interior(sdi = FALSE, lr = 0.1, no.leaves = 10, max.depth =4, 
+                         min.data.in.leaf = 50, feature.fraction = 0.8, 
+                         extra.trees = FALSE, top.rate = 0.2, other.rate = 0.1,
+                         cat.smooth = 10, path.smooth = 0.1,
+                         inputdf = df_qx(di = "TDI", q = 1), y = full.df_7$age,
+                         est.type = "quantile", 
+                         cv = 5L, no.trees = 100L, no.threads = 4L, 
+                         early.stopping = 10L,  seed = NA)
+
+
+library(GA)
+# Optimisation Age
+
+
 tic()
 im<- wrapper_default(hyperpars = c(0.1,10), inputdf = df_qx(di = "TDI", q = 1),
                      y = full.df_7$age, est.type = "quantile", seed = 12345)
