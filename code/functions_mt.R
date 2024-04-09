@@ -2,8 +2,8 @@
 
 #icd10.to.class: finds the disease/ injury classification of an icd10 vector as listed in the preregistration
 #suspicious.Diag.entries: Since the icd10 field is a text field in the GP's software, the data might contain typing errors or atypical notation of diseases. This function returns a vector that filters out whose entries are =1 if they are 'suspicious' and 0 otherwise. An entry is considered suspicious if it does not have a length of 4, 6, or 7 characters. If it has 4, 6, or 7 characters it is suspicious if it does not follow either of the patterns 
-  #1. capital letter, two numbers, capital letter
-  #2. capital letter, two numbers, fullstop, one or two numbers, capital letter
+#1. capital letter, two numbers, capital letter
+#2. capital letter, two numbers, fullstop, one or two numbers, capital letter
 #
 
 
@@ -155,7 +155,7 @@ chunk.adddata<- function(chunkeddl, adddata){
 }
 
 add.stamm.new.par<- function(edf,sdf, no.splits,no.workers){
-  #parallelised version of add.stamm.new
+  #parallelised version of add.stamm.new (created for a different project). Merges Stamm-data to the incident data frame.
   dl_e<- chunk.data(edf,no.splits)
   dl_stamm<- chunk.adddata(dl_e,sdf)
   par.cl<- makeCluster(no.workers)
@@ -208,7 +208,7 @@ add.stamm.new.par<- function(edf,sdf, no.splits,no.workers){
 }
 
 add.konsul<- function(edf,sdf, no.splits,no.workers){
-  #slightly adjusted version of add.stamm.new.par
+  #slightly adjusted version of add.stamm.new.par. Merges Konsul-data to incident data frame.
   dl_e<- chunk.data(edf,no.splits)
   dl_stamm<- chunk.adddata(dl_e,sdf)
   par.cl<- makeCluster(no.workers)
@@ -261,6 +261,7 @@ add.konsul<- function(edf,sdf, no.splits,no.workers){
 }
 
 praxisID2location<- function(praxisID){
+  # takes an atomic vector of PraxisIDs with length >=1 and returns a vector of the same length with the name of the practices' municipalities.
   l<- length(praxisID)
   out<- numeric(length = l)
   for(i in seq_along(praxisID)){
@@ -282,6 +283,7 @@ praxisID2location<- function(praxisID){
 }
 
 praxisID2location_id<- function(praxisID){
+  # takes an atomic vector of PraxisIDs with length >=1 and returns a vector of the same length with the name of the practices' location IDs
   l<- length(praxisID)
   out<- numeric(length = l)
   for(i in seq_along(praxisID)){
@@ -351,6 +353,7 @@ weatherdata.transformation<- function(wdf, sel.quantile=NA, sel.temperature_kelv
 }
 
 add.weather<- function(fdf,no.workers){
+  # merges weather data to the incident data frame.
   locations<- unique(fdf$landkreis)
   fl<- list()
   twl<- list()
@@ -408,70 +411,17 @@ SDI<- function(df,w,theta,rho,tau){
   out<- w[1]*(theta[1]*T + theta[2]*T^2 + theta[3]*T^3 + rho[1]*RH + rho[2]*RH + rho[3]*RH + tau* T*RH)
   if(length(w)>1){
     for(i in seq(2,length(w))){
-      T<- df[paste0("temperature_kelvin_l",i)]
-      RH<- df[paste0("relative_humidity_l",i)]
+      T<- df[paste0("temperature_kelvin_l",i-1)]
+      RH<- df[paste0("relative_humidity_l",i-1)]
       out<- out+ w[i]*(theta[1]*T + theta[2]*T^2 + theta[3]*T^3 + rho[1]*RH + rho[2]*RH + rho[3]*RH + tau* T*RH)
     }
   }
-  return(out)
+  colnames(out)<- "SDI"
+  return(out$SDI)
 }
 
-# add.chronic<- function(diagdf,chronicdf){
-#   addage<- as(matrix(0,nrow = nrow(diagdf),ncol = 11), "sparseMatrix")
-#   pb<- txtProgressBar(min = 0, max = nrow(chronicdf), initial = 0)
-#   for(i in seq(1,nrow(chronicdf))){
-#     row.selector<- diagdf$uniPatID==chronicdf[i,1]
-#     addage[row.selector,chronicdf[i,2]]<- addage[row.selector,chronicdf[i,2]]+1
-#     setTxtProgressBar(pb,i)
-#   }
-#   addage<- as.data.frame(addage)
-#   colnames(addage)<- paste0(rep("chronic_",11),1:11)
-#   no_all_chronic_diseases<- rowSums(addage)
-#   addage$no_all_chronic_diseases<- no_all_chronic_diseases
-#   out<- cbind(diagdf,addage)
-#   return(out)
-# }
-# add.chronic<- function(diagdf,chronicdf){
-#   chronicdf<- chronicdf|>
-#     group_by(uniPatID, diag_category)|>
-#     mutate(counts = n())|>
-#     distinct()|>
-#     ungroup()
-#   addage<- matrix(0,nrow = nrow(diagdf),ncol = 11)
-#   pb<- txtProgressBar(min = 0, max = nrow(chronicdf), initial = 0)
-#   for(i in seq(1,nrow(chronicdf))){
-#     row.selector<- which(diagdf$uniPatID==as.numeric(chronicdf[i,1]))
-#     addage[row.selector,as.numeric(chronicdf[i,2])]<- as.numeric(chronicdf[i,3])
-#     setTxtProgressBar(pb,i)
-#   }
-#   addage<- as.data.frame(addage)
-#   colnames(addage)<- paste0(rep("chronic_",11),1:11)
-#   no_all_chronic_diseases<- rowSums(addage)
-#   addage$no_all_chronic_diseases<- no_all_chronic_diseases
-#   out<- cbind(diagdf,addage)
-#   return(out)
-# }
-# add.chronic<- function(diagdf,chronicdf){
-#   chronicdf<- chronicdf|>
-#     group_by(uniPatID, diag_category)|>
-#     mutate(counts = n())|>
-#     distinct()|>
-#     ungroup()
-#   addage<- matrix(0,nrow = nrow(diagdf),ncol = 11)
-#   pb<- txtProgressBar(min = 0, max = nrow(chronicdf), initial = 0)
-#   for(i in seq(1,nrow(chronicdf))){
-#     row.selector<- which(diagdf$uniPatID==as.numeric(chronicdf[i,1]))
-#     addage[row.selector,as.numeric(chronicdf[i,2])]<- as.numeric(chronicdf[i,3])
-#     setTxtProgressBar(pb,i)
-#   }
-#   addage<- as.data.frame(addage)
-#   colnames(addage)<- paste0(rep("chronic_",11),1:11)
-#   no_all_chronic_diseases<- rowSums(addage)
-#   addage$no_all_chronic_diseases<- no_all_chronic_diseases
-#   out<- cbind(diagdf,addage)
-#   return(out)
-# }
 add.chronic<- function(diagdf,chronicdf){
+  # Creates an incident data frame from a diagnosis (Diag) data frame by merging data about chronic diseases.
   chronicdf<- chronicdf|>
     group_by(uniPatID, diag_category)|>
     mutate(counts = n())|>
@@ -488,8 +438,8 @@ add.chronic<- function(diagdf,chronicdf){
     setTxtProgressBar(pb,i)
   }
   addage<- as.data.frame(as.matrix(sparseMatrix(i = unlist(row.list),
-                                      j = unlist(column.list),
-                                      x = unlist(value.list))))
+                                                j = unlist(column.list),
+                                                x = unlist(value.list))))
   if(nrow(addage)<nrow(diagdf)){
     addage<- rbind(addage, matrix(0,nrow = nrow(diagdf)-nrow(addage), ncol = ncol(addage)))
   }
@@ -500,6 +450,7 @@ add.chronic<- function(diagdf,chronicdf){
 }
 
 praxis_id2landkreis_id<- function(practiceids){
+  # transforms an atomic vector of practiceIDs into a vector of Landkreis IDs.
   practiceids<- as.character(practiceids)
   out<- numeric(length(practiceids))
   for(i in seq_along(practiceids)){
@@ -509,6 +460,7 @@ praxis_id2landkreis_id<- function(practiceids){
 }
 
 add.covid<- function(df,cdf, no.workers){
+  # merges Covid-19 data to an incident data frame.
   all.location.ids<- unique(df$Landkreis_id)
   dl<- list()
   cl<- list()
@@ -548,6 +500,7 @@ add.covid<- function(df,cdf, no.workers){
 }
 
 add.daylight<- function(fdf,no.workers){
+  # merges daylight data to an incident data frame
   fdl<- list()
   dldl<- list()
   ids<- unique(fdf$PraxisID)
@@ -585,6 +538,7 @@ add.daylight<- function(fdf,no.workers){
 }
 
 risk.factor.merger<- function(vec_1, vec_2){
+  # takes two numeric hot encoded vectors of risk factors and turns them into a single vector of risk factors, using the rules laid out in the paper.
   out<- numeric(length(vec_1))
   for(i in seq_along(vec_1)){
     if(vec_1[i]==vec_2[i]){
@@ -607,6 +561,7 @@ risk.factor.merger<- function(vec_1, vec_2){
 }
 
 add.last.visit<-function(fdf, no.splits, no.workers){
+  # finds the last visit for a disease of the same category and merges it to the incident data frame
   part.dl<- chunk.data(fdf,no.splits)
   
   visit.cluster<- makeCluster(no.workers)
@@ -633,1031 +588,8 @@ add.last.visit<-function(fdf, no.splits, no.workers){
   return(out)
 }
 
-elastic.net<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.knots=NULL, sel.loss.function, sel.quantile=NULL, alpha, lambda, no.starts=1, no.workers=2, max.iter=1000, step.size=1, lc.rho=c(1,1), tol=1e-6){
-  #A function which calculates the elastic net estimate of a regression problem with splines using coordinate descent. The regression problems that can be solved are quantile regression and logistic regression (multiclass cross-entropy is currently not supported)
-  #inputdf is a dataframe of variables used to estimate y.
-  #y is the 'dependent' variable
-  #standardize.y can be used to standardize y
-  #spline.pos is a vector which specifies which columns of inputdf are to be estimated with a spline.
-  #spline.knots are the number of knots that are used for each spline. It is a vector, too; the entry on spline.knots corresponds to the entry on spline.pos.
-  #sel.loss.function is the loss function: either "quantile" or "proportion"
-  #alpha is the parameter that shifts between lasso (alpha=0) and Ridge (alpha=1) penalty.
-  #lambda is the regularization parameter: the higher lambda, the more the parameters are shrunk towards 0.
-  #no.starts is the number of starts of the estimation. Usually should be set to 1. For a single start, no. starts will use the ordinary least squares estimates as start values. For more starts, the start values are proportionally shrunk towards 0.
-  #no.workers is the numbers of workers used to calculate the coefficients if more than one start is chosen.
-  #max.iter is the maximum number of iterations.
-  #step.size is the starting length of the step.
-  #tol is a tolerance threshold used in several places: convergence, shrinkage to values close to zero, and step lengths. In these places, numbers below the threshold are considered zero.
-  
-  
-  #standardize data
-  mean.vec<- colMeans(inputdf)
-  var.vec<- apply(inputdf,2,var)
-  df<- (inputdf-matrix(mean.vec,nrow = nrow(inputdf), ncol = ncol(inputdf), byrow = TRUE))/matrix(sqrt(var.vec),nrow = nrow(inputdf), ncol = ncol(inputdf), byrow = TRUE)
-  colnames(df)<- colnames(inputdf)
-  if(standardize.y==TRUE){
-    mean.y<- mean(y)
-    sd.y<- sd(y)
-    y<- (y-mean.y)/sd.y
-  }
-  
-  #create new spline data and contraints
-  spline.list<- list()
-  constraint.list<- list()
-  cut.list<- list()
-  if(!is.null(spline.pos)){
-    for(i in seq_along(spline.pos)){
-      #prepare splines as columns
-      spline.data<- df[,spline.pos[i]]
-      no.knots<- spline.knots[i]
-      cuts<- quantile(spline.data, probs=seq(0,1,length.out=(2+no.knots)))
-      addage<- as.data.frame(matrix(0, nrow = nrow(df), ncol = no.knots+1))
-      for(j in seq(1,no.knots+1)){
-        selector<- spline.data>=cuts[j] & spline.data<=cuts[j+1]
-        addage[selector,j]<- spline.data[selector]
-      }
-      colnames(addage)<- paste0(colnames(df)[spline.pos[i]], seq(1,no.knots+1))
-      cut.list[[i]]<- cuts
-      
-      #spline constraints
-      part.constraint.matrix<- matrix(0,nrow = no.knots*3, ncol = no.knots*4)
-      colnames(part.constraint.matrix)<- c(
-        paste0("a_",seq(1,no.knots+1)),
-        paste0("b_",seq(1,no.knots+1)),
-        paste0("c_",seq(2,no.knots)),
-        paste0("d_",seq(2,no.knots))
-      )
-      
-      acc<- function(string){
-        which(string==colnames(part.constraint.matrix))
-      }
-      
-      k<- cuts[-c(1,length(cuts))]
-      
-      part.constraint.matrix[1,acc("a_1")]<- -1
-      part.constraint.matrix[1,acc("b_1")]<- -1
-      part.constraint.matrix[1,acc("a_2")]<- k[1]^3
-      part.constraint.matrix[1,acc("b_2")]<- k[1]^2
-      part.constraint.matrix[1,acc("c_2")]<- k[1]
-      part.constraint.matrix[1,acc("d_2")]<- 1
-      
-      part.constraint.matrix[2,acc(paste0("a_",no.knots))]<- -(k[no.knots])^3
-      part.constraint.matrix[2,acc(paste0("b_",no.knots))]<- -(k[no.knots])^2
-      part.constraint.matrix[2,acc(paste0("c_",no.knots))]<- -(k[no.knots])
-      part.constraint.matrix[2,acc(paste0("d_",no.knots))]<- -1
-      part.constraint.matrix[2,acc(paste0("a_",no.knots+1))]<- k[no.knots]
-      part.constraint.matrix[2,acc(paste0("b_",no.knots+1))]<- 1
-      
-      part.constraint.matrix[3,acc("a_1")]<- -1
-      part.constraint.matrix[3,acc("a_2")]<- 3*(k[1])^2
-      part.constraint.matrix[3,acc("b_2")]<- 2*k[1]
-      part.constraint.matrix[3,acc("c_2")]<- 1
-      
-      part.constraint.matrix[4,acc(paste0("a_",no.knots+1))]<- -1
-      part.constraint.matrix[4,acc(paste0("a_",no.knots))]<- 3*(k[no.knots])^2
-      part.constraint.matrix[4,acc(paste0("b_",no.knots))]<- 2*(k[no.knots])
-      part.constraint.matrix[4,acc(paste0("c_",no.knots))]<- 1
-      
-      part.constraint.matrix[5,acc("a_2")]<- 6*k[1]
-      part.constraint.matrix[5,acc("b_2")]<- 2
-      
-      part.constraint.matrix[6,acc(paste0("a_",no.knots))]<- 6*k[no.knots]
-      part.constraint.matrix[6,acc(paste0("b_",no.knots))]<- 2
-      
-      if(no.knots>2){
-        ticker<- 7
-        for(j in seq(1,no.knots-2)){
-          part.constraint.matrix[ticker,acc(paste0("a_",j+1))]<- -(k[j+1])^3
-          part.constraint.matrix[ticker,acc(paste0("b_",j+1))]<- -(k[j+1])^2
-          part.constraint.matrix[ticker,acc(paste0("c_",j+1))]<- -(k[j+1])
-          part.constraint.matrix[ticker,acc(paste0("d_",j+1))]<- -1
-          part.constraint.matrix[ticker,acc(paste0("a_",j+2))]<- (k[j+1])^3
-          part.constraint.matrix[ticker,acc(paste0("b_",j+2))]<- (k[j+1])^2
-          part.constraint.matrix[ticker,acc(paste0("c_",j+2))]<- (k[j+1])
-          part.constraint.matrix[ticker,acc(paste0("d_",j+2))]<- 1
-          
-          ticker<- ticker+1
-          
-          part.constraint.matrix[ticker,acc(paste0("a_",j+1))]<- 3*(k[j+1])^2
-          part.constraint.matrix[ticker,acc(paste0("b_",j+1))]<- 2*k[j+1]
-          part.constraint.matrix[ticker,acc(paste0("c_",j+1))]<- 1
-          part.constraint.matrix[ticker,acc(paste0("a_",j+2))]<- -3*(k[j+1])^2
-          part.constraint.matrix[ticker,acc(paste0("b_",j+2))]<- -2*k[j+1]
-          part.constraint.matrix[ticker,acc(paste0("c_",j+2))]<- -1
-          
-          ticker<- ticker+1
-          
-          part.constraint.matrix[ticker,acc(paste0("a_",j+1))]<- 6*k[j+1]
-          part.constraint.matrix[ticker,acc(paste0("b_",j+1))]<- 2
-          part.constraint.matrix[ticker,acc(paste0("a_",j+2))]<- -6*k[j+1]
-          part.constraint.matrix[ticker,acc(paste0("b_",j+2))]<- -2
-          
-          ticker<- ticker+1
-        }
-      }
-      
-      
-      
-      #create data to be used with constraint matrix
-      
-      addage_2<- as.data.frame(matrix(NA, nrow = nrow(df), ncol = ncol(part.constraint.matrix)))
-      for(j in seq(1,ncol(part.constraint.matrix))){
-        var.name<- colnames(part.constraint.matrix)[j]
-        var.letter<- substr(var.name,1,1)
-        var.index<- as.numeric(substr(var.name,3,3))
-        intercept<- FALSE
-        if(var.letter=="a"){
-          if(var.index==1){
-            exponent<- 1
-          }else{
-            exponent<- 3
-          }
-        }else if(var.letter=="b"){
-          if(var.index==1){
-            intercept<- TRUE
-          }else{
-            exponent<- 2
-          }
-        }else if(var.letter=="c"){
-          exponent<- 1
-        }else if(var.letter=="d"){
-          intercept<- TRUE
-        }
-        
-        if(intercept){
-          addage_2[,j]<- as.numeric(addage[,var.index]!=0)
-        }else{
-          addage_2[,j]<- addage[,var.index]^exponent
-        }
-        colnames(addage_2)[j]<- paste0(colnames(addage)[var.index],"_", var.name)
-      }
-      colnames(part.constraint.matrix)<- paste0("s",i,"_",colnames(part.constraint.matrix))
-      constraint.list[[i]]<- part.constraint.matrix
-      spline.list[[i]]<- addage_2
-    }
-    
-    df<- df[,-spline.pos]
-  }
-  
-  df$intercept<- 1
-  no.not.spline.params<- ncol(df)
-  
-  for (i in seq_along(spline.list)) {
-    df<- cbind(df,spline.list[[i]])
-  }
-  
-  constraint.matrix<- matrix(0,ncol = no.not.spline.params+sum(spline.knots)*4, nrow = sum(spline.knots)*3)
-  start.col<- no.not.spline.params+1
-  start.row<- 1
-  for(i in seq_along(constraint.list)){
-    n<- nrow(constraint.list[[i]])
-    p<- ncol(constraint.list[[i]])
-    constraint.matrix[seq(start.row,start.row+n-1),seq(start.col,start.col+p-1)]<- constraint.list[[i]]
-    start.row<- start.row+n
-    start.col<- start.col+p
-  }
-  
-  #loss functions and their gradients
-  if(sel.loss.function=="quantile"){
-    loss.function<- function(beta.vec){
-      n<- nrow(df)
-      residual<- y-as.matrix(df)%*%beta.vec
-      positive<- residual>0
-      likelihood<- (sum(sel.quantile*residual[positive])+sum((sel.quantile-1)*residual[!positive]))/n
-      linear.constraint<- lc.rho%*%c(ticker,ticker^2) *sqrt(0.5*sum((constraint.matrix%*%beta.vec)^2))/nrow(constraint.matrix)
-      regularization<- lambda*(alpha*sum(abs(beta.vec))+(1-alpha)*sqrt(sum(beta.vec^2)))
-      return(likelihood + linear.constraint+ regularization)
-    }
-    loss.gradient<- function(ind,beta.vec){
-      dataframe<- as.matrix(df)
-      likelihood<- (sel.quantile-1+as.numeric(dataframe%*%beta.vec))%*%dataframe[,ind]/nrow(dataframe)
-      linear.constraint<- lc.rho%*%c(ticker,ticker^2) *constraint.matrix[,ind]%*% (constraint.matrix%*%beta.vec) /(tol+nrow(constraint.matrix)*sqrt(2*sum((constraint.matrix%*%beta.vec)^2)))
-      regularization<- lambda*(alpha*sign(beta.vec[ind])+(1-alpha)*2*beta.vec[ind]/sqrt(sum((beta.vec)^2)))
-      out<- as.numeric(likelihood +linear.constraint +regularization)
-      return(out)
-    }
-  }else if(sel.loss.function=="proportion"){
-    loss.function<- function(beta.vec){
-      fitted<- as.numeric(as.matrix(df)%*%beta.vec)
-      likelihood<- ((1-y)%*%fitted+sum(log(1+exp(-fitted))))/nrow(df)
-      linear.constraint<- lc.rho%*%c(ticker,ticker^2) *sqrt(0.5*sum((constraint.matrix%*%beta.vec)^2))/nrow(constraint.matrix)
-      regularization<- lambda*(alpha*sum(abs(beta.vec[1:no.not.spline.params]))+(1-alpha)*sqrt(sum(beta.vec[1:no.not.spline.params]^2)))
-      return(likelihood + linear.constraint+ regularization)
-    }
-    loss.gradient<- function(ind, beta.vec){
-      likelihood<- as.matrix(df)[,ind]%*%((1+exp(-as.matrix(df)%*%beta.vec))^(-1)-y) /nrow(df)
-      linear.constraint<- lc.rho%*%c(ticker,ticker^2) *constraint.matrix[,ind]%*% (constraint.matrix%*%beta.vec) /(tol+nrow(constraint.matrix)*sqrt(2*sum((constraint.matrix%*%beta.vec)^2)))
-      regularization<- lambda*(alpha*sign(beta.vec[ind])+(1-alpha)*2*beta.vec[ind]/sqrt(sum((beta.vec)^2)))
-      out<- as.numeric(likelihood +linear.constraint +regularization)
-      return(out)
-    }
-  # }else if(sel.loss.function=="cross-entropy"){
-  #   loss.function<- function(beta.vec){
-  #     beta.matrix<- matrix(beta.vec,nrow = ncol(df))
-  #     fitted<- exp(as.matrix(df)%*%beta.matrix)
-  #     q<- diag(rowSums(fitted)^(-1))%*%fitted
-  #     y_dummy<- model.matrix(~as.factor(y)+0)
-  #     likelihood<- sum(y_dummy*q) #sum?
-  #     linear.constraint<- 0.5*sum((constraint.matrix%*%beta.matrix)^2)
-  #     regularization<- lambda*(alpha*sum(abs(beta.vec))+(1-alpha)*sqrt(sum(beta.vec^2)))
-  #     return(likelihood + linear.constraint+ regularization)
-  #   }
-  #   loss.gradient<- function(ind, beta.vec){
-  #     k<- (ind-1) %% ncol(df)+1
-  #     m<- ((ind-1) %/% ncol(df))+1
-  #     beta.matrix<- matrix(beta.vec,nrow = ncol(df))
-  #     fitted<- exp(as.matrix(df)%*%beta.matrix)
-  #     y_dummy<- model.matrix(~as.factor(y)+0)
-  #     likelihood_1<- y_dummy[,m]%*%as.matrix(df)[,k]
-  #     likelihood_2<- sum(t(y_dummy)%*%diag((rowSums(fitted))^(-1))%*%(as.matrix(df)[,k]*fitted[,m]))
-  #     likelihood<- likelihood_1-likelihood_2
-  #     linear.constraint<- constraint.matrix[,k]%*% as.numeric(constraint.matrix%*%beta.matrix[,m])
-  #     regularization<- lambda*(alpha*sign(beta.vec[ind])+(1-alpha)*2*beta.vec[ind]/sqrt(sum((beta.vec)^2)))
-  #     out<- as.numeric(likelihood +linear.constraint +regularization)
-  #     return(out)
-  #   }
-  }
-  
-  #start values
-  beta.list<- list()
-  if(sel.loss.function=="cross-entropy"){
-    no.params<- length(levels(as.factor(y)))*ncol(constraint.matrix)
-  }else{
-    no.params<- ncol(constraint.matrix)
-  }
-  
-  if(ncol(df)>nrow(df)){
-    base.data<- rbind(df,as.matrix(df)[sample(1:nrow(df),ncol(df)-nrow(df)),])
-  }else{
-    base.data<- df
-  }
-  
-  if(sel.loss.function=="quantile"){
-    form<- as.formula(paste("y~0+",paste(colnames(df), sep = "", collapse = "+ ")))
-    beta_start<- rq(formula = form, tau = sel.quantile, data = base.data, method = "fn")$coefficients
-  }else if(sel.loss.function=="proportion"){
-    form<- as.formula(paste("y~0+",paste(colnames(df), sep = "", collapse = "+ ")))
-    beta_start<- numeric(no.params)
-    beta_start[1:no.not.spline.params]<- glm(formula = form, family = binomial, data = base.data)$coefficients[1:no.not.spline.params]
-  # }else if(sel.loss.function=="cross-entropy"){
-  #   beta_start<- optim(rnorm(no.params), fn = function(beta.vec){
-  #     beta.matrix<- matrix(beta.vec,nrow = ncol(df))
-  #     fitted<- exp(as.matrix(df)%*%beta.matrix)
-  #     q<- diag(rowSums(fitted)^(-1))%*%fitted
-  #     y_dummy<- model.matrix(~as.factor(y)+0)
-  #     likelihood<- sum(y_dummy*q)
-  #     return(likelihood)
-  #   },
-  #   gr = function(beta.vec){
-  #     k<- (seq(1,length(beta.vec))-1) %% ncol(df)+1
-  #     m<- ((seq(1,length(beta.vec))-1) %/% ncol(df))+1
-  #     beta.matrix<- matrix(beta.vec,nrow = ncol(df))
-  #     fitted<- exp(as.matrix(df)%*%beta.matrix)
-  #     y_dummy<- model.matrix(~as.factor(y)+0)
-  #     likelihood_1<- y_dummy[,m]%*%as.matrix(df)[,k]
-  #     likelihood_2<- sum(t(y_dummy)%*%diag((rowSums(fitted))^(-1))%*%(as.matrix(df)[,k]*fitted[,m]))
-  #     likelihood<- likelihood_1-likelihood_2
-  #     return(likelihood)
-  #   },
-  #   method = "BFGS")
-  }
-  
-  beta.list<- list()
-  for(i in seq(1,no.starts)){
-    beta.list[[i]]<- beta_start*seq(1,0, length.out = no.starts+1)[i]
-  }
-  
-  #optimization process
-  
-  z_fun<- function(z){
-    beta_start<- beta.list[[z]]
-    ticker<- 1
-    convergence<- FALSE
-    beta_new<- beta_start
-    beta_sugg<- beta_new
-    step.vec<- rep(step.size,length(beta_start))
-    while(ticker<=max.iter && !convergence && any(step.vec>tol)){
-      beta_baseline<- beta_new
-      selected.vars<- seq_along(beta_start)[step.vec>=tol]
-      for(i in selected.vars){
-        beta_sugg[i]<- beta_new[i]-step.vec[i]*loss.gradient(i, beta_new)
-        while(loss.function(beta_sugg)>loss.function(beta_new)){
-          step.vec[i]<- 0.5*step.vec[i]
-          beta_sugg[i]<- beta_new[i]-step.vec[i]*loss.gradient(i, beta_new)
-        }
-        if(abs(beta_sugg[i])<=tol){
-          # beta_round<- beta_sugg
-          # beta_round[i]<- 0
-          # if(loss.function(beta_round)<=loss.function(beta_sugg)){
-          #   beta_sugg<- beta_round
-          # }
-          beta_sugg[i]<- 0
-        }
-        beta_new<- beta_sugg
-      }
-      ticker<- ticker+1
-      convergence<- loss.function(beta_baseline)-loss.function(beta_new) <=tol
-    }
-    out.list<- list()
-    out.list$converged<- convergence
-    out.list$beta<- beta_new
-    out.list$loss_old<- loss.function(beta_start)
-    out.list$loss_new<- loss.function(beta_new)
-    out.list$final_step_length<- step.vec
-    out.list$iterations<- ticker-1
-    return(out.list)
-  }
-  
-  if(no.starts>1){
-    coordinate.cluster<- makeCluster(no.workers)
-    clusterExport(cl = coordinate.cluster, varlist =  c("beta.list", "loss.function", "loss.gradient", "df", "y", "constraint.matrix", "max.iter", "step.size", "tol"), envir = environment())
-    results<- parLapply(cl = coordinate.cluster,seq_along(beta.list), fun = z_fun)
-  }else{
-    results<- lapply(seq_along(beta.list), FUN = z_fun)
-  }
-  
-  out<- list()
-  out$converged<- numeric(no.starts)
-  out$loss_old<- numeric(no.starts)
-  out$loss_new<- numeric(no.starts)
-  out$final_step_length<- matrix(NA,ncol = no.params, nrow = no.starts)
-  out$iterations<- numeric(no.starts)
-  out$beta<- matrix(NA,ncol = no.params, nrow = no.starts)
-  
-  for(i in seq(1,no.starts)){
-    out$converged[i]<- results[[i]]$converged
-    out$beta[i,]<- results[[i]]$beta
-    out$loss_old[i]<- results[[i]]$loss_old
-    out$loss_new[i]<- results[[i]]$loss_new
-    out$final_step_length[i,]<- results[[i]]$final_step_length
-    out$iterations[i]<- results[[i]]$iterations
-  }
-  colnames(out$beta)<- colnames(df)
-  
-  for(i in seq_along(cut.list)){
-    old.names<- names(out)
-    out$im<- cut.list[[i]]
-    names(out)<- c(old.names,paste0("cuts_",i))
-  }
-  
-  return(out)
-}
-
-elastic.net_speed<- function(inputdf, y, standardize.y=FALSE, spline.pos=NULL, spline.knots=NULL, sel.loss.function, sel.quantile=NULL, alpha, lambda, no.starts=1, no.workers=2, max.iter=1000, step.size=1, lc.rho, tol=1e-6){
-  #A function which calculates the elastic net estimate of a regression problem with splines using coordinate descent. The regression problems that can be solved are quantile regression and logistic regression (multiclass cross-entropy is currently not supported)
-  #inputdf is a dataframe of variables used to estimate y.
-  #y is the 'dependent' variable
-  #standardize.y can be used to standardize y
-  #spline.pos is a vector which specifies which columns of inputdf are to be estimated with a spline.
-  #spline.knots are the number of knots that are used for each spline. It is a vector, too; the entry on spline.knots corresponds to the entry on spline.pos.
-  #sel.loss.function is the loss function: either "quantile" or "proportion"
-  #alpha is the parameter that shifts between lasso (alpha=0) and Ridge (alpha=1) penalty.
-  #lambda is the regularization parameter: the higher lambda, the more the parameters are shrunk towards 0.
-  #no.starts is the number of starts of the estimation. Usually should be set to 1. For a single start, no. starts will use the ordinary least squares estimates as start values. For more starts, the start values are proportionally shrunk towards 0.
-  #no.workers is the numbers of workers used to calculate the coefficients if more than one start is chosen.
-  #max.iter is the maximum number of iterations.
-  #step.size is the starting length of the step.
-  #tol is a tolerance threshold used in several places: convergence, shrinkage to values close to zero, and step lengths. In these places, numbers below the threshold are considered zero.
-  
-  
-  #standardize data
-  mean.vec<- colMeans(inputdf)
-  var.vec<- apply(inputdf,2,var)
-  df<- (inputdf-matrix(mean.vec,nrow = nrow(inputdf), ncol = ncol(inputdf), byrow = TRUE))/matrix(sqrt(var.vec),nrow = nrow(inputdf), ncol = ncol(inputdf), byrow = TRUE)
-  colnames(df)<- colnames(inputdf)
-  if(standardize.y==TRUE){
-    mean.y<- mean(y)
-    sd.y<- sd(y)
-    y<- (y-mean.y)/sd.y
-  }
-  
-  #create new spline data and contraints
-  spline.list<- list()
-  constraint.list<- list()
-  cut.list<- list()
-  if(!is.null(spline.pos)){
-    for(i in seq_along(spline.pos)){
-      #prepare splines as columns
-      spline.data<- df[,spline.pos[i]]
-      no.knots<- spline.knots[i]
-      cuts<- quantile(spline.data, probs=seq(0,1,length.out=(2+no.knots)))
-      addage<- as.data.frame(matrix(0, nrow = nrow(df), ncol = no.knots+1))
-      for(j in seq(1,no.knots+1)){
-        selector<- spline.data>=cuts[j] & spline.data<=cuts[j+1]
-        addage[selector,j]<- spline.data[selector]
-      }
-      colnames(addage)<- paste0(colnames(df)[spline.pos[i]], seq(1,no.knots+1))
-      cut.list[[i]]<- cuts
-      
-      #spline constraints
-      part.constraint.matrix<- matrix(0,nrow = no.knots*3, ncol = no.knots*4)
-      colnames(part.constraint.matrix)<- c(
-        paste0("a_",seq(1,no.knots+1)),
-        paste0("b_",seq(1,no.knots+1)),
-        paste0("c_",seq(2,no.knots)),
-        paste0("d_",seq(2,no.knots))
-      )
-      
-      acc<- function(string){
-        which(string==colnames(part.constraint.matrix))
-      }
-      
-      k<- cuts[-c(1,length(cuts))]
-      
-      part.constraint.matrix[1,acc("a_1")]<- -1
-      part.constraint.matrix[1,acc("b_1")]<- -1
-      part.constraint.matrix[1,acc("a_2")]<- k[1]^3
-      part.constraint.matrix[1,acc("b_2")]<- k[1]^2
-      part.constraint.matrix[1,acc("c_2")]<- k[1]
-      part.constraint.matrix[1,acc("d_2")]<- 1
-      
-      part.constraint.matrix[2,acc(paste0("a_",no.knots))]<- -(k[no.knots])^3
-      part.constraint.matrix[2,acc(paste0("b_",no.knots))]<- -(k[no.knots])^2
-      part.constraint.matrix[2,acc(paste0("c_",no.knots))]<- -(k[no.knots])
-      part.constraint.matrix[2,acc(paste0("d_",no.knots))]<- -1
-      part.constraint.matrix[2,acc(paste0("a_",no.knots+1))]<- k[no.knots]
-      part.constraint.matrix[2,acc(paste0("b_",no.knots+1))]<- 1
-      
-      part.constraint.matrix[3,acc("a_1")]<- -1
-      part.constraint.matrix[3,acc("a_2")]<- 3*(k[1])^2
-      part.constraint.matrix[3,acc("b_2")]<- 2*k[1]
-      part.constraint.matrix[3,acc("c_2")]<- 1
-      
-      part.constraint.matrix[4,acc(paste0("a_",no.knots+1))]<- -1
-      part.constraint.matrix[4,acc(paste0("a_",no.knots))]<- 3*(k[no.knots])^2
-      part.constraint.matrix[4,acc(paste0("b_",no.knots))]<- 2*(k[no.knots])
-      part.constraint.matrix[4,acc(paste0("c_",no.knots))]<- 1
-      
-      part.constraint.matrix[5,acc("a_2")]<- 6*k[1]
-      part.constraint.matrix[5,acc("b_2")]<- 2
-      
-      part.constraint.matrix[6,acc(paste0("a_",no.knots))]<- 6*k[no.knots]
-      part.constraint.matrix[6,acc(paste0("b_",no.knots))]<- 2
-      
-      if(no.knots>2){
-        ticker<- 7
-        for(j in seq(1,no.knots-2)){
-          part.constraint.matrix[ticker,acc(paste0("a_",j+1))]<- -(k[j+1])^3
-          part.constraint.matrix[ticker,acc(paste0("b_",j+1))]<- -(k[j+1])^2
-          part.constraint.matrix[ticker,acc(paste0("c_",j+1))]<- -(k[j+1])
-          part.constraint.matrix[ticker,acc(paste0("d_",j+1))]<- -1
-          part.constraint.matrix[ticker,acc(paste0("a_",j+2))]<- (k[j+1])^3
-          part.constraint.matrix[ticker,acc(paste0("b_",j+2))]<- (k[j+1])^2
-          part.constraint.matrix[ticker,acc(paste0("c_",j+2))]<- (k[j+1])
-          part.constraint.matrix[ticker,acc(paste0("d_",j+2))]<- 1
-          
-          ticker<- ticker+1
-          
-          part.constraint.matrix[ticker,acc(paste0("a_",j+1))]<- 3*(k[j+1])^2
-          part.constraint.matrix[ticker,acc(paste0("b_",j+1))]<- 2*k[j+1]
-          part.constraint.matrix[ticker,acc(paste0("c_",j+1))]<- 1
-          part.constraint.matrix[ticker,acc(paste0("a_",j+2))]<- -3*(k[j+1])^2
-          part.constraint.matrix[ticker,acc(paste0("b_",j+2))]<- -2*k[j+1]
-          part.constraint.matrix[ticker,acc(paste0("c_",j+2))]<- -1
-          
-          ticker<- ticker+1
-          
-          part.constraint.matrix[ticker,acc(paste0("a_",j+1))]<- 6*k[j+1]
-          part.constraint.matrix[ticker,acc(paste0("b_",j+1))]<- 2
-          part.constraint.matrix[ticker,acc(paste0("a_",j+2))]<- -6*k[j+1]
-          part.constraint.matrix[ticker,acc(paste0("b_",j+2))]<- -2
-          
-          ticker<- ticker+1
-        }
-      }
-      
-      
-      
-      #create data to be used with constraint matrix
-      
-      addage_2<- as.data.frame(matrix(NA, nrow = nrow(df), ncol = ncol(part.constraint.matrix)))
-      for(j in seq(1,ncol(part.constraint.matrix))){
-        var.name<- colnames(part.constraint.matrix)[j]
-        var.letter<- substr(var.name,1,1)
-        var.index<- as.numeric(substr(var.name,3,3))
-        intercept<- FALSE
-        if(var.letter=="a"){
-          if(var.index==1){
-            exponent<- 1
-          }else{
-            exponent<- 3
-          }
-        }else if(var.letter=="b"){
-          if(var.index==1){
-            intercept<- TRUE
-          }else{
-            exponent<- 2
-          }
-        }else if(var.letter=="c"){
-          exponent<- 1
-        }else if(var.letter=="d"){
-          intercept<- TRUE
-        }
-        
-        if(intercept){
-          addage_2[,j]<- as.numeric(addage[,var.index]!=0)
-        }else{
-          addage_2[,j]<- addage[,var.index]^exponent
-        }
-        colnames(addage_2)[j]<- paste0(colnames(addage)[var.index],"_", var.name)
-      }
-      colnames(part.constraint.matrix)<- paste0("s",i,"_",colnames(part.constraint.matrix))
-      constraint.list[[i]]<- part.constraint.matrix
-      spline.list[[i]]<- addage_2
-    }
-    
-    df<- df[,-spline.pos]
-  }
-  
-  df$intercept<- 1
-  no.not.spline.params<- ncol(df)
-  
-  for (i in seq_along(spline.list)) {
-    df<- cbind(df,spline.list[[i]])
-  }
-  
-  constraint.matrix<- matrix(0,ncol = no.not.spline.params+sum(spline.knots)*4, nrow = sum(spline.knots)*3)
-  start.col<- no.not.spline.params+1
-  start.row<- 1
-  for(i in seq_along(constraint.list)){
-    n<- nrow(constraint.list[[i]])
-    p<- ncol(constraint.list[[i]])
-    constraint.matrix[seq(start.row,start.row+n-1),seq(start.col,start.col+p-1)]<- constraint.list[[i]]
-    start.row<- start.row+n
-    start.col<- start.col+p
-  }
-  
-  #loss functions and their gradients
-  if(sel.loss.function=="quantile"){
-    loss.function<- function(beta.vec){
-      n<- nrow(df)
-      residual<- y-as.matrix(df)%*%beta.vec
-      positive<- residual>0
-      likelihood<- (sum(sel.quantile*residual[positive])+sum((sel.quantile-1)*residual[!positive]))/n
-      linear.constraint<- lc.rho *sqrt(0.5*sum((constraint.matrix%*%beta.vec)^2))/nrow(constraint.matrix)
-      regularization<- lambda*(alpha*sum(abs(beta.vec))+(1-alpha)*sqrt(sum(beta.vec^2)))
-      return(likelihood + linear.constraint+ regularization)
-    }
-    loss.gradient<- function(ind,beta.vec){
-      dataframe<- as.matrix(df)
-      likelihood<- (sel.quantile-1+as.numeric(dataframe%*%beta.vec))%*%dataframe[,ind]/nrow(dataframe)
-      linear.constraint<- lc.rho *constraint.matrix[,ind]%*% (constraint.matrix%*%beta.vec) /(tol+nrow(constraint.matrix)*sqrt(2*sum((constraint.matrix%*%beta.vec)^2)))
-      regularization<- lambda*(alpha*sign(beta.vec[ind])+(1-alpha)*2*beta.vec[ind]/sqrt(sum((beta.vec)^2)))
-      out<- as.numeric(likelihood +linear.constraint +regularization)
-      return(out)
-    }
-  }else if(sel.loss.function=="proportion"){
-    loss.function<- function(beta.vec){
-      fitted<- as.numeric(as.matrix(df)%*%beta.vec)
-      likelihood<- ((1-y)%*%fitted+sum(log(1+exp(-fitted))))/nrow(df)
-      linear.constraint<- lc.rho *sqrt(0.5*sum((constraint.matrix%*%beta.vec)^2))/nrow(constraint.matrix)
-      regularization<- lambda*(alpha*sum(abs(beta.vec[1:no.not.spline.params]))+(1-alpha)*sqrt(sum(beta.vec[1:no.not.spline.params]^2)))
-      return(likelihood + linear.constraint+ regularization)
-    }
-    loss.gradient<- function(ind, beta.vec){
-      likelihood<- as.matrix(df)[,ind]%*%((1+exp(-as.matrix(df)%*%beta.vec))^(-1)-y) /nrow(df)
-      linear.constraint<- lc.rho *constraint.matrix[,ind]%*% (constraint.matrix%*%beta.vec) /(tol+nrow(constraint.matrix)*sqrt(2*sum((constraint.matrix%*%beta.vec)^2)))
-      regularization<- lambda*(alpha*sign(beta.vec[ind])+(1-alpha)*2*beta.vec[ind]/sqrt(sum((beta.vec)^2)))
-      out<- as.numeric(likelihood +linear.constraint +regularization)
-      return(out)
-    }
-    # }else if(sel.loss.function=="cross-entropy"){
-    #   loss.function<- function(beta.vec){
-    #     beta.matrix<- matrix(beta.vec,nrow = ncol(df))
-    #     fitted<- exp(as.matrix(df)%*%beta.matrix)
-    #     q<- diag(rowSums(fitted)^(-1))%*%fitted
-    #     y_dummy<- model.matrix(~as.factor(y)+0)
-    #     likelihood<- sum(y_dummy*q) #sum?
-    #     linear.constraint<- 0.5*sum((constraint.matrix%*%beta.matrix)^2)
-    #     regularization<- lambda*(alpha*sum(abs(beta.vec))+(1-alpha)*sqrt(sum(beta.vec^2)))
-    #     return(likelihood + linear.constraint+ regularization)
-    #   }
-    #   loss.gradient<- function(ind, beta.vec){
-    #     k<- (ind-1) %% ncol(df)+1
-    #     m<- ((ind-1) %/% ncol(df))+1
-    #     beta.matrix<- matrix(beta.vec,nrow = ncol(df))
-    #     fitted<- exp(as.matrix(df)%*%beta.matrix)
-    #     y_dummy<- model.matrix(~as.factor(y)+0)
-    #     likelihood_1<- y_dummy[,m]%*%as.matrix(df)[,k]
-    #     likelihood_2<- sum(t(y_dummy)%*%diag((rowSums(fitted))^(-1))%*%(as.matrix(df)[,k]*fitted[,m]))
-    #     likelihood<- likelihood_1-likelihood_2
-    #     linear.constraint<- constraint.matrix[,k]%*% as.numeric(constraint.matrix%*%beta.matrix[,m])
-    #     regularization<- lambda*(alpha*sign(beta.vec[ind])+(1-alpha)*2*beta.vec[ind]/sqrt(sum((beta.vec)^2)))
-    #     out<- as.numeric(likelihood +linear.constraint +regularization)
-    #     return(out)
-    #   }
-  }
-  
-  #start values
-  beta.list<- list()
-  if(sel.loss.function=="cross-entropy"){
-    no.params<- length(levels(as.factor(y)))*ncol(constraint.matrix)
-  }else{
-    no.params<- ncol(constraint.matrix)
-  }
-  
-  if(ncol(df)>nrow(df)){
-    base.data<- rbind(df,as.matrix(df)[sample(1:nrow(df),ncol(df)-nrow(df)),])
-  }else{
-    base.data<- df
-  }
-  
-  if(sel.loss.function=="quantile"){
-    form<- as.formula(paste("y~0+",paste(colnames(df), sep = "", collapse = "+ ")))
-    beta_start<- rq(formula = form, tau = sel.quantile, data = base.data, method = "fn")$coefficients
-  }else if(sel.loss.function=="proportion"){
-    form<- as.formula(paste("y~0+",paste(colnames(df), sep = "", collapse = "+ ")))
-    beta_start<- numeric(no.params)
-    beta_start[1:no.not.spline.params]<- glm(formula = form, family = binomial, data = base.data)$coefficients[1:no.not.spline.params]
-    # }else if(sel.loss.function=="cross-entropy"){
-    #   beta_start<- optim(rnorm(no.params), fn = function(beta.vec){
-    #     beta.matrix<- matrix(beta.vec,nrow = ncol(df))
-    #     fitted<- exp(as.matrix(df)%*%beta.matrix)
-    #     q<- diag(rowSums(fitted)^(-1))%*%fitted
-    #     y_dummy<- model.matrix(~as.factor(y)+0)
-    #     likelihood<- sum(y_dummy*q)
-    #     return(likelihood)
-    #   },
-    #   gr = function(beta.vec){
-    #     k<- (seq(1,length(beta.vec))-1) %% ncol(df)+1
-    #     m<- ((seq(1,length(beta.vec))-1) %/% ncol(df))+1
-    #     beta.matrix<- matrix(beta.vec,nrow = ncol(df))
-    #     fitted<- exp(as.matrix(df)%*%beta.matrix)
-    #     y_dummy<- model.matrix(~as.factor(y)+0)
-    #     likelihood_1<- y_dummy[,m]%*%as.matrix(df)[,k]
-    #     likelihood_2<- sum(t(y_dummy)%*%diag((rowSums(fitted))^(-1))%*%(as.matrix(df)[,k]*fitted[,m]))
-    #     likelihood<- likelihood_1-likelihood_2
-    #     return(likelihood)
-    #   },
-    #   method = "BFGS")
-  }
-  
-  beta.list<- list()
-  for(i in seq(1,no.starts)){
-    beta.list[[i]]<- beta_start*seq(1,0, length.out = no.starts+1)[i]
-  }
-  
-  #optimization process
-  
-  z_fun<- function(z){
-    beta_start<- beta.list[[z]]
-    gradient.fun<- function(beta) sapply(seq_along(beta), function(index){loss.gradient(index,beta)})
-    result<- optim(par = beta_start, fn = loss.function, gr = gradient.fun, method = "BFGS", control = list(maxit=max.iter, abstol= tol))
-    
-    out.list<- list()
-    out.list$converged<- result$convergence
-    out.list$beta<- result$par
-    out.list$loss_old<- loss.function(beta_start)
-    out.list$loss_new<- loss.function(out.list$beta)
-    return(out.list)
-  }
-  
-  if(no.starts>1){
-    coordinate.cluster<- makeCluster(no.workers)
-    clusterExport(cl = coordinate.cluster, varlist =  c("beta.list", "loss.function", "loss.gradient", "df", "y", "constraint.matrix", "max.iter", "step.size", "tol"), envir = environment())
-    results<- parLapply(cl = coordinate.cluster,seq_along(beta.list), fun = z_fun)
-  }else{
-    results<- lapply(1,z_fun)
-  }
-  
-  out<- list()
-  out$converged<- numeric(no.starts)
-  out$loss_old<- numeric(no.starts)
-  out$loss_new<- numeric(no.starts)
-  out$beta<- matrix(NA,ncol = no.params, nrow = no.starts)
-  
-  for(i in seq(1,no.starts)){
-    out$converged[i]<- results[[i]]$converged
-    out$beta[i,]<- results[[i]]$beta
-    out$loss_old[i]<- results[[i]]$loss_old
-    out$loss_new[i]<- results[[i]]$loss_new
-
-  }
-  colnames(out$beta)<- colnames(df)
-  
-  for(i in seq_along(cut.list)){
-    old.names<- names(out)
-    out$im<- cut.list[[i]]
-    names(out)<- c(old.names,paste0("cuts_",i))
-  }
-  
-  return(out)
-}
-
-tdi.effect<- function(x,beta,cuts){
-  #estimates the linear effect of Thom's discomfort index (thus not the partial effect, as it still needs to be transformed)
-  #x is a vector of points for which the effect is to be estimated
-  #beta is the beta vector, provided by elastic.net and elastic.net_speed
-  #cuts is the cuts vector, provided by elastic.net and elastic.net_speed
-  params<- as.vector(beta[grepl("thoms_discomfort_index",colnames(beta))])
-  names(params)<- colnames(beta)[grepl("thoms_discomfort_index",colnames(beta))]
-  for(i in seq_along(params)){
-    varname<- substr(names(params)[i],nchar(names(params)[i])-2,nchar(names(params)[i]))
-    assign(varname,params[i])
-  }
-  out<- numeric(length(x))
-  cuts_abridged<- cuts[2:(length(cuts)-1)]
-  for(i in seq_along(out)){
-    if(x[i]<min(cuts_abridged)){
-      out[i]<- a_1*x[i]+b_1
-    }else if(x[i]>max(cuts_abridged)){
-      no<- length(cuts)-1
-      out[i]<- get(paste0("a_",no))*x[i]+get(paste0("b_",no))
-    }else{
-      no<- 1+sum(x[i]>=cuts_abridged)
-      out[i]<- get(paste0("a_",no))*x[i]^3+get(paste0("b_",no))*x[i]^2+get(paste0("c_",no))*x[i]+get(paste0("d_",no))
-    }
-  }
-  return(out)
-}
-
-hw.effect<- function(x,beta,cuts){
-  #estimates the linear effect of heat wave length (thus not the partial effect, as it still needs to be transformed). Similar to tdi.effect
-  #x is a vector of points for which the effect is to be estimated
-  #beta is the beta vector, provided by elastic.net and elastic.net_speed
-  #cuts is the cuts vector, provided by elastic.net and elastic.net_speed
-  params<- as.vector(beta[grepl("length_heat_wave",colnames(beta))])
-  names(params)<- colnames(beta)[grepl("length_heatwave",colnames(beta))]
-  for(i in seq_along(params)){
-    varname<- substr(names(params)[i],nchar(names(params)[i])-2,nchar(names(params)[i]))
-    assign(varname,params[i])
-  }
-  out<- numeric(length(x))
-  cuts_abridged<- cuts[2:(length(cuts)-1)]
-  for(i in seq_along(out)){
-    if(x[i]<min(cuts_abridged)){
-      out[i]<- a_1*x[i]+b_1
-    }else if(x[i]>max(cuts_abridged)){
-      no<- length(cuts)-1
-      out[i]<- get(paste0("a_",no))*x[i]+get(paste0("b_",no))
-    }else{
-      no<- 1+sum(x[i]>=cuts_abridged)
-      out[i]<- get(paste0("a_",no))*x[i]^3+get(paste0("b_",no))*x[i]^2+get(paste0("c_",no))*x[i]+get(paste0("d_",no))
-    }
-  }
-  return(out)
-}
-
-tuning.Thom_q1_age<- function(pars){
-  #tuning wrapper for research question 1, TDI, age.
-  #pars is a triple of real numbers (as vector). They stand for lambda, alpha, and rho from the linear constraints. Each parameter is transformed within the function such that they all fit their respective domain.
-  lambda_value<- exp(pars[1])
-  alpha_value<- 1/(1+exp(pars[2]))
-  lc<- exp(pars[3])
-  
-  df<- rhs_Thom_q1[sample(1:nrow(rhs_Thom_q1),nrow(rhs_Thom_q1)),]|>
-    arrange(TG_DateNum)|>
-    select(-TG_DateNum)
-  fold.vec<- rep(1:n.folds, ceiling(nrow(df)/n.folds))[1:n.folds]
-  loss.vec<- numeric(n.folds)
-  
-  quantile<- 0.5
-  knots<- 4
-  
-  for(i in seq(1,n.folds)){
-    im<- elastic.net_speed(inputdf = df[fold.vec!=i,], y= full.df_7$age[fold.vec!=i], spline.pos = 1, spline.knots = knots, sel.loss.function = "quantile", sel.quantile = quantile, alpha = alpha_value, lambda = lambda_value, tol = 1e-6, max.iter = 50, lc.rho = lc)
-    beta_hat<- im$beta
-    
-    loss.function<- function(beta.vec){
-      n<- nrow(df[fold.vec==i,])
-      residual<- full.df_7$age[fold.vec==i]-as.matrix(df[fold.vec==i,-1])%*%beta.vec[seq(1,ncol(df)-1)]-tdi.effect(df$thoms_discomfort_index[fold.vec==i],beta_hat,im$cuts)
-      positive<- residual>0
-      likelihood<- (sum(quantile*residual[positive])+sum((quantile-1)*residual[!positive]))/n
-      return(likelihood)
-    }
-    loss.vec[i]<- loss.function(as.vector(beta_hat))
-  }
-  
-  return(sum(loss.vec))
-}
-
-tuning.Thom_q1_gender<- function(pars){
-  #tuning wrapper for research question 1, TDI, age.
-  #pars is a triple of real numbers (as vector). They stand for lambda, alpha, and rho from the linear constraints. Each parameter is transformed within the function such that they all fit their respective domain.
-  lambda_value<- exp(pars[1])
-  alpha_value<- 1/(1+exp(pars[2]))
-  lc<- exp(pars[3])
-  
-  df<- rhs_Thom_q1[sample(1:nrow(rhs_Thom_q1),nrow(rhs_Thom_q1)),]|>
-    arrange(TG_DateNum)|>
-    select(-TG_DateNum)
-  fold.vec<- rep(1:n.folds, ceiling(nrow(df)/n.folds))[1:n.folds]
-  loss.vec<- numeric(n.folds)
-  
-  knots<- 4
-  
-  for(i in seq(1,n.folds)){
-    im<- elastic.net_speed(inputdf = df[fold.vec!=i,], y= full.df_7$female[fold.vec!=i], spline.pos = 1, spline.knots = knots, sel.loss.function = "proportion", alpha = alpha_value, lambda = lambda_value, tol = 1e-6, max.iter = 50, lc.rho = lc)
-    beta_hat<- im$beta
-    
-    loss.function<- function(beta.vec){
-      n<- nrow(df[fold.vec==i,])
-      residual<- full.df_7$age[fold.vec==i]-as.matrix(df[fold.vec==i,-1])%*%beta.vec[seq(1,ncol(df)-1)]-tdi.effect(df$thoms_discomfort_index[fold.vec==i],beta_hat,im$cuts)
-      positive<- residual>0
-      likelihood<- (sum(quantile*residual[positive])+sum((quantile-1)*residual[!positive]))/n
-      return(likelihood)
-    }
-    loss.vec[i]<- loss.function(as.vector(beta_hat))
-  }
-  
-  return(sum(loss.vec))
-}
-
-tuning.Thom_q1_phi<- function(pars){
-  #tuning wrapper for research question 1, TDI, age.
-  #pars is a triple of real numbers (as vector). They stand for lambda, alpha, and rho from the linear constraints. Each parameter is transformed within the function such that they all fit their respective domain.
-  lambda_value<- exp(pars[1])
-  alpha_value<- 1/(1+exp(pars[2]))
-  lc<- exp(pars[3])
-  
-  df<- rhs_Thom_q1[sample(1:nrow(rhs_Thom_q1),nrow(rhs_Thom_q1)),]|>
-    arrange(TG_DateNum)|>
-    select(-TG_DateNum)
-  fold.vec<- rep(1:n.folds, ceiling(nrow(df)/n.folds))[1:n.folds]
-  loss.vec<- numeric(n.folds)
-  
-  knots<- 4
-  
-  for(i in seq(1,n.folds)){
-    im<- elastic.net_speed(inputdf = df[fold.vec!=i,], y= full.df_7$PKV[fold.vec!=i], spline.pos = 1, spline.knots = knots, sel.loss.function = "proportion", alpha = alpha_value, lambda = lambda_value, tol = 1e-6, max.iter = 50, lc.rho = lc)
-    beta_hat<- im$beta
-    
-    loss.function<- function(beta.vec){
-      n<- nrow(df[fold.vec==i,])
-      residual<- full.df_7$age[fold.vec==i]-as.matrix(df[fold.vec==i,-1])%*%beta.vec[seq(1,ncol(df)-1)]-tdi.effect(df$thoms_discomfort_index[fold.vec==i],beta_hat,im$cuts)
-      positive<- residual>0
-      likelihood<- (sum(quantile*residual[positive])+sum((quantile-1)*residual[!positive]))/n
-      return(likelihood)
-    }
-    loss.vec[i]<- loss.function(as.vector(beta_hat))
-  }
-  
-  return(sum(loss.vec))
-}
-
-tuning.Thom_q1_chronic<- function(pars){
-  #tuning wrapper for research question 1, TDI, age.
-  #pars is a triple of real numbers (as vector). They stand for lambda, alpha, and rho from the linear constraints. Each parameter is transformed within the function such that they all fit their respective domain.
-  lambda_value<- exp(pars[1])
-  alpha_value<- 1/(1+exp(pars[2]))
-  lc<- exp(pars[3])
-  
-  df<- rhs_Thom_q1[sample(1:nrow(rhs_Thom_q1),nrow(rhs_Thom_q1)),]|>
-    arrange(TG_DateNum)|>
-    select(-TG_DateNum)
-  fold.vec<- rep(1:n.folds, ceiling(nrow(df)/n.folds))[1:n.folds]
-  loss.vec<- numeric(n.folds)
-  
-  knots<- 4
-  
-  for(i in seq(1,n.folds)){
-    im<- elastic.net_speed(inputdf = df[fold.vec!=i,], y= full.df_7$no_all_chronic_diseases[fold.vec!=i], spline.pos = 1, spline.knots = knots, sel.loss.function = "proportion", alpha = alpha_value, lambda = lambda_value, tol = 1e-6, max.iter = 50, lc.rho = lc)
-    beta_hat<- im$beta
-    
-    loss.function<- function(beta.vec){
-      n<- nrow(df[fold.vec==i,])
-      residual<- full.df_7$age[fold.vec==i]-as.matrix(df[fold.vec==i,-1])%*%beta.vec[seq(1,ncol(df)-1)]-tdi.effect(df$thoms_discomfort_index[fold.vec==i],beta_hat,im$cuts)
-      positive<- residual>0
-      likelihood<- (sum(quantile*residual[positive])+sum((quantile-1)*residual[!positive]))/n
-      return(likelihood)
-    }
-    loss.vec[i]<- loss.function(as.vector(beta_hat))
-  }
-  
-  return(sum(loss.vec))
-}
-
-tuning.hw_q1_age<- function(pars){
-  #tuning wrapper for research question 1, heat wave, age.
-  #pars is a triple of real numbers (as vector). They stand for lambda, alpha, and rho from the linear constraints. Each parameter is transformed within the function such that they all fit their respective domain.
-  lambda_value<- exp(pars[1])
-  alpha_value<- 1/(1+exp(pars[2]))
-  lc<- exp(pars[3])
-  
-  df<- rhs_heatwave_q1[sample(1:nrow(rhs_heatwave_q1),nrow(rhs_heatwave_q1)),]|>
-    arrange(TG_DateNum)|>
-    select(-TG_DateNum)
-  fold.vec<- rep(1:n.folds, ceiling(nrow(df)/n.folds))[1:n.folds]
-  loss.vec<- numeric(n.folds)
-  
-  quantile<- 0.5
-  knots<- 4
-  
-  for(i in seq(1,n.folds)){
-    im<- elastic.net_speed(inputdf = df[fold.vec!=i,], y= full.df_7$age[fold.vec!=i], spline.pos = 1, spline.knots = knots, sel.loss.function = "quantile", sel.quantile = quantile, alpha = alpha_value, lambda = lambda_value, tol = 1e-6, max.iter = 50, lc.rho = lc)
-    beta_hat<- im$beta
-    
-    loss.function<- function(beta.vec){
-      n<- nrow(df[fold.vec==i,])
-      residual<- full.df_7$age[fold.vec==i]-as.matrix(df[fold.vec==i,-1])%*%beta.vec[seq(1,ncol(df)-1)]-hw.effect(df$length_heatwave[fold.vec==i],beta_hat,im$cuts)
-      positive<- residual>0
-      likelihood<- (sum(quantile*residual[positive])+sum((quantile-1)*residual[!positive]))/n
-      return(likelihood)
-    }
-    loss.vec[i]<- loss.function(as.vector(beta_hat))
-  }
-  
-  return(sum(loss.vec))
-}
-
-tuning.hw_q1_gender<- function(pars){
-  #tuning wrapper for research question 1, heat wave, gender.
-  #pars is a triple of real numbers (as vector). They stand for lambda, alpha, and rho from the linear constraints. Each parameter is transformed within the function such that they all fit their respective domain.
-  lambda_value<- exp(pars[1])
-  alpha_value<- 1/(1+exp(pars[2]))
-  lc<- exp(pars[3])
-  
-  df<- rhs_heatwave_q1[sample(1:nrow(rhs_heatwave_q1),nrow(rhs_heatwave_q1)),]|>
-    arrange(TG_DateNum)|>
-    select(-TG_DateNum)
-  fold.vec<- rep(1:n.folds, ceiling(nrow(df)/n.folds))[1:n.folds]
-  loss.vec<- numeric(n.folds)
-  
-  knots<- 4
-  
-  for(i in seq(1,n.folds)){
-    im<- elastic.net_speed(inputdf = df[fold.vec!=i,], y= full.df_7$female[fold.vec!=i], spline.pos = 1, spline.knots = knots, sel.loss.function = "proportion", alpha = alpha_value, lambda = lambda_value, tol = 1e-6, max.iter = 50, lc.rho = lc)
-    beta_hat<- im$beta
-    
-    loss.function<- function(beta.vec){
-      n<- nrow(df[fold.vec==i,])
-      residual<- full.df_7$age[fold.vec==i]-as.matrix(df[fold.vec==i,-1])%*%beta.vec[seq(1,ncol(df)-1)]-hw.effect(df$length_heatwave[fold.vec==i],beta_hat,im$cuts)
-      positive<- residual>0
-      likelihood<- (sum(quantile*residual[positive])+sum((quantile-1)*residual[!positive]))/n
-      return(likelihood)
-    }
-    loss.vec[i]<- loss.function(as.vector(beta_hat))
-  }
-  
-  return(sum(loss.vec))
-}
-
-tuning.hw_q1_phi<- function(pars){
-  #tuning wrapper for research question 1, heat wave, gender.
-  #pars is a triple of real numbers (as vector). They stand for lambda, alpha, and rho from the linear constraints. Each parameter is transformed within the function such that they all fit their respective domain.
-  lambda_value<- exp(pars[1])
-  alpha_value<- 1/(1+exp(pars[2]))
-  lc<- exp(pars[3])
-  
-  df<- rhs_heatwave_q1[sample(1:nrow(rhs_heatwave_q1),nrow(rhs_heatwave_q1)),]|>
-    arrange(TG_DateNum)|>
-    select(-TG_DateNum)
-  fold.vec<- rep(1:n.folds, ceiling(nrow(df)/n.folds))[1:n.folds]
-  loss.vec<- numeric(n.folds)
-  
-  knots<- 4
-  
-  for(i in seq(1,n.folds)){
-    im<- elastic.net_speed(inputdf = df[fold.vec!=i,], y= full.df_7$PKV[fold.vec!=i], spline.pos = 1, spline.knots = knots, sel.loss.function = "proportion", alpha = alpha_value, lambda = lambda_value, tol = 1e-6, max.iter = 50, lc.rho = lc)
-    beta_hat<- im$beta
-    
-    loss.function<- function(beta.vec){
-      n<- nrow(df[fold.vec==i,])
-      residual<- full.df_7$age[fold.vec==i]-as.matrix(df[fold.vec==i,-1])%*%beta.vec[seq(1,ncol(df)-1)]-hw.effect(df$length_heatwave[fold.vec==i],beta_hat,im$cuts)
-      positive<- residual>0
-      likelihood<- (sum(quantile*residual[positive])+sum((quantile-1)*residual[!positive]))/n
-      return(likelihood)
-    }
-    loss.vec[i]<- loss.function(as.vector(beta_hat))
-  }
-  
-  return(sum(loss.vec))
-}
-
-tuning.hw_q1_chronic<- function(pars){
-  #tuning wrapper for research question 1, heat wave, gender.
-  #pars is a triple of real numbers (as vector). They stand for lambda, alpha, and rho from the linear constraints. Each parameter is transformed within the function such that they all fit their respective domain.
-  lambda_value<- exp(pars[1])
-  alpha_value<- 1/(1+exp(pars[2]))
-  lc<- exp(pars[3])
-  
-  df<- rhs_heatwave_q1[sample(1:nrow(rhs_heatwave_q1),nrow(rhs_heatwave_q1)),]|>
-    arrange(TG_DateNum)|>
-    select(-TG_DateNum)
-  fold.vec<- rep(1:n.folds, ceiling(nrow(df)/n.folds))[1:n.folds]
-  loss.vec<- numeric(n.folds)
-  
-  knots<- 4
-  
-  for(i in seq(1,n.folds)){
-    im<- elastic.net_speed(inputdf = df[fold.vec!=i,], y= full.df_7$no_all_chronic_diseases[fold.vec!=i], spline.pos = 1, spline.knots = knots, sel.loss.function = "proportion", alpha = alpha_value, lambda = lambda_value, tol = 1e-6, max.iter = 50, lc.rho = lc)
-    beta_hat<- im$beta
-    
-    loss.function<- function(beta.vec){
-      n<- nrow(df[fold.vec==i,])
-      residual<- full.df_7$age[fold.vec==i]-as.matrix(df[fold.vec==i,-1])%*%beta.vec[seq(1,ncol(df)-1)]-hw.effect(df$length_heatwave[fold.vec==i],beta_hat,im$cuts)
-      positive<- residual>0
-      likelihood<- (sum(quantile*residual[positive])+sum((quantile-1)*residual[!positive]))/n
-      return(likelihood)
-    }
-    loss.vec[i]<- loss.function(as.vector(beta_hat))
-  }
-  
-  return(sum(loss.vec))
-}
-
 df_qx<- function(inputdf = full.df_7, di, q){
-  # creates a data frame for research question 1 or 2 with a specified discomfort index.
+  # creates an input data frame for research question 1 or 2. With customisation for the desired discomfort index.
   # inputdf is the data frame from which the variables are extracted
   # di is the discomfort index. It is either "TDI" for Thom's discomfort index, "HW" for the length of heatwave, or "SDI" for the suggested discomfort index
   # q specifies the research question- either it takes the value 1 or 2.
@@ -1697,6 +629,295 @@ df_qx<- function(inputdf = full.df_7, di, q){
 }
 
 stoch.round<- function(x){
-  # implementation of stochastic rounding to integer for purposes of hyperparameter tuning
-  floor(x)+ runif(length(x))<=(x-floor(x))
+  # implementation of stochastic rounding to integer, for purposes of hyperparameter tuning. It can handle atomic vector inputs.
+  floor(x)+ as.numeric(runif(length(x))<=(x-floor(x)))
+}
+
+wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth, 
+                            min.data.in.leaf, feature.fraction, cat.l2,
+                            extra.trees = FALSE, top.rate, other.rate,
+                            cat.smooth, path.smooth,
+                            inputdf, y, est.type, alpha = 0.5, cv = 5L,
+                            no.trees = 100L, no.threads = 4L, 
+                            early.stopping = 10L, seed = NA){
+  # Interior wrapper for cross-validation of the model. Returns the mean of the error estimated for each fold. If cv<=1, instead of cross validation, a model trained on the entire input data is returned (to be precise, a lgbBooster).
+  # sdi is FALSE by default. If the suggested discomfort index is to be used, sdi has to be an atomic vector.
+  # if sdi = TRUE:
+  # sdi[1] number of lags/ size for the weights of sdi
+  # sdi[2] alpha/ shape parameter 1 for the weights of sdi
+  # sdi[3] beta/ shape parameter 2 for the weights of sdi
+  # sdi[4:6] theta values for the daily temperature of the sdi
+  # sdi[7:9] rho values for the daily humidity of the sdi
+  # sdi[10] tau value for the daily interaction between temperature and humidity
+  # lr is the learning rate (double, >=0)
+  # no.leaves is the maximum number of leaves a single tree may have (int, >=2)
+  # max.depth is the maximum depth an individual tree may have (int, >=1)
+  # min.data.in.leaf is the minimum number of training observations that are found in every leaf (int, >=1)
+  # feature.fraction is the fraction of features/ variables considered for each split (0< double <=1)
+  # cat.l2 is a l2 smoothing parameter applied to categorical variables (double, >=0)
+  # extra.trees: from the parameter description, "if set to true, when evaluating node splits LightGBM will check only one randomly-chosen threshold for each feature" (Boolean)
+  # top.rate: from the parameter description, "the retain ratio of large gradient data" used in GOSS (0< double <1).
+  # other.rate: from the parameter description, "the retain ratio of small gradient data" used in GOSS (0< double <1).
+  # cat.smooth is a parameter that can be used to deal with noisy observations in categorical data (double, >=0).
+  # path.smooth is a smoothing parameter applied to tree nodes (double, >=0)
+  # inputdf is the input data frame which contains all explanatory variables
+  # y is the vector of outcomes/ labels
+  # est.type specifies the loss function. It may take the values "quantile", "binary", "multiclass", or "cross_entropy".
+  # alpha is in this context the quantile to be estimated during quantile regression.
+  # cv is the number of folds for cross-validation (2<= integer >= number of observations - 1)
+  # seed is a seed that may be deployed to the wrapper, but it is not needed. Due to the parallelisation, exact replication is not possible.
+  
+  if(est.type=="quantile"){
+    lossfct<- "quantile"
+  }else if(est.type=="binary"){
+    lossfct<- "binary_logloss"
+  }else if(est.type=="multiclass"){
+    lossfct<- "multi_logloss"
+  }else if(est.type=="cross_entropy"){
+    lossfct<- "xentropy"
+  }
+  
+  blacklist<- c("thoms_discomfort_index", "length_heatwave", "sdi", 
+                "daylight_hours", "covid_7_day_incidence", "age", 
+                colnames(inputdf)[grep("chronic", colnames(inputdf))])
+  if(length(sdi)>1){
+    sdi.weights<- dbetabinom.ab(x = seq(0,sdi[1]), size = sdi[1],
+                                shape1 = sdi[2], shape2 = sdi[3])
+    sdi.vec<- SDI(df = inputdf, w = sdi.weights, theta = sdi[4:6],
+                  rho = sdi[7:9], tau = sdi[10])
+    
+    col.selector<- grepl("temperature", colnames(inputdf)) | grepl("humidity", colnames(inputdf))
+    im<- cbind(inputdf[,!col.selector],sdi.vec)
+    colnames(im)<- c(colnames(inputdf)[!col.selector],"sdi")
+    im<- data.matrix(im)
+    factor.vars<- colnames(im)[!colnames(im) %in% blacklist]
+    df<- lgb.Dataset(data.matrix(inputdf),
+                     categorical_feature = factor.vars)
+  }else{
+    factor.vars<- colnames(inputdf)[!colnames(inputdf) %in% blacklist]
+    df<- lgb.Dataset(data.matrix(inputdf),
+                     categorical_feature = factor.vars)
+  }
+  
+  if(!is.na(seed)){
+    set.seed(seed)
+  }
+  
+  parameters<- list(objective = est.type, data_sample_strategy = "goss", 
+                    num_trees = no.trees,
+                    num_threads = no.threads,
+                    learning_rate = lr, num_leaves = no.leaves,
+                    use_missing = TRUE,
+                    zero_as_missing = FALSE,
+                    max_depth = max.depth,
+                    min_data_in_leaf = min.data.in.leaf,
+                    feature_fraction = feature.fraction,
+                    extra_trees = extra.trees,
+                    top_rate = top.rate,
+                    other_rate = other.rate,
+                    cat_l2 = cat.l2,
+                    cat_smooth = cat.smooth,
+                    path_smooth = path.smooth,
+                    alpha = alpha)
+  
+  if(cv>1){
+    results<- list()
+    out<- numeric(cv)
+    for(i in seq(1,cv)){
+      valid.selector<- seq(i, nrow(inputdf), by= cv)
+      df<- lgb.Dataset(data.matrix(inputdf)[-valid.selector,],
+                       label = y[-valid.selector])
+      valid.df<- lgb.Dataset(data.matrix(inputdf)[valid.selector,],
+                             categorical_feature = factor.vars,
+                             label = y[valid.selector],
+                             reference = df)
+      results[[i]]<- lgb.train(params = parameters, data = df, 
+                               nrounds = no.trees, 
+                               valids = list(my_validation = valid.df), 
+                               obj = est.type,verbose = 1, record = TRUE,
+                               categorical_feature = factor.vars, 
+                               early_stopping_rounds = early.stopping,
+                               eval = lossfct)
+      out[i]<- results[[i]]$best_score
+    }
+    return(mean(out))
+  }else{
+    out<- lgb.train(params = parameters, data = df, nrounds = no.trees, 
+                    obj = est.type,verbose = 1, record = TRUE,
+                    categorical_feature = factor.vars, eval = lossfct)
+    return(out)
+  }
+}
+
+genetic.algorithm<- function(optim.seed, n = 50, pcrossover = 0.8,
+                             pmutation = 0.1, maxiter = 10, elitism = 4,
+                             digits,
+                             sdi = FALSE, lr, no.leaves, max.depth, 
+                             min.data.in.leaf, feature.fraction, cat.l2,
+                             extra.trees = FALSE, top.rate, other.rate,
+                             cat.smooth, path.smooth,
+                             inputdf, y, est_type, alpha = 0.5, cv = 5L,
+                             no_trees = 100L, no_threads = 4L, 
+                             early_stopping = 10L, seed = NA){
+  
+  # A genetic algorithm that adapted from the ga function from the GA-package by Luca Scrucca (doi:10.18637/jss.v053.i04). The loss function is rounded to two significant digits; as secondary fitness evaluation speed is used.
+  # optim.seed: start seed for optimization
+  # n: number of members in the population
+  # pcrossover: probability for chromosomes to merge
+  # pmutation: probability for a mutation to occur
+  # maxiter: integer number of generations that are trained
+  # elitism: integer number of parent models that are permitted to procreate. Sorted best to worst, the first to elitism-th model form the parent model pool.
+  # digits is an integer vector of length maxiter. The i-th entry in digits gives the number of significant digits to be considered during evolution 
+  # sdi to path.smooth: instead of individual values (like wrapper_interior), takes atomic vectors of length 2 with the lower and upper limit that the respective hyperparameter can take.
+  # all others: vis-à-vis wrapper_interior
+  results<- list()
+  limits<- rbind(lr, no.leaves, max.depth, min.data.in.leaf, feature.fraction,
+                 cat.l2, extra.trees, top.rate, other.rate, cat.smooth, 
+                 path.smooth)
+  colnames(limits)<- c("lower","upper")
+  X<- matrix(NA, nrow = n, ncol = 11)
+  colnames(X)<- c("lr", "no.leaves", "max.depth", "min.data.in.leaf", 
+                  "feature.fraction", "cat.l2", "extra.trees", "top.rate",
+                  "other.rate", "cat.smooth", "path.smooth")
+  
+  set.seed(optim.seed)
+  if(isTRUE(sdi)){
+    sdi_init<- c(NA, NA, NA, 0.45, 0, 0, -0.07975, 0, 0, 0.0055)
+    X_2<- matrix(NA,nrow = n, ncol = 10)
+    for(i in seq(1,10)){
+      X_2[,i]<- sdi.sampler(i, n, sdi_init)
+    }
+    colnames(X_2)<- c("no.lags","sdi.alpha","sdi.beta", "theta_1",  "theta_2",
+                      "theta_3", "rho_1", "rho_2", "rho_3","tau")
+    X<- cbind(X,X_2)
+  }
+  
+  for(i in seq(1,11)){
+    X[,i]<- runif(n, min = limits[i,1], max = limits[i,2])
+  }
+  
+  # Generation 1
+  Y<- numeric(n)
+  delta_t<- numeric(n)
+  for(i in seq(1,n)){
+    if(isTRUE(sdi)){
+      sdi.pars<- X[i,12:21]
+    }else{
+      sdi.pars<- FALSE
+    }
+    tic()
+    Y[i]<- wrapper_interior(sdi = sdi.pars, X[i,1], stoch.round(X[i,2]), 
+                            stoch.round(X[i,3]), stoch.round(X[i,4]), X[i,5], 
+                            X[i,6], as.logical(stoch.round(X[i,7])), X[i,8], 
+                            X[i,9], X[i,10], X[i,11],
+                            inputdf = inputdf, y = y, est.type = est_type, 
+                            alpha = alpha, cv = cv, no.trees = no_trees,
+                            no.threads = no_threads, 
+                            early.stopping = early_stopping, seed = seed)
+    im<- toc()
+    delta_t[i]<- im$toc - im$tic
+  }
+  Y_round<- signif(Y, digits = digits[1])
+  generation.results<- as.data.frame(cbind(X, Y, Y_round, delta_t))|>
+    arrange(Y_round,delta_t)
+  results[[1]]<- generation.results
+  best.in.class<- generation.results[1,]
+  
+  # Generation 2+
+  for(s in seq(2,maxiter)){
+    set.seed(optim.seed + s)
+    X_new<- X
+    mutation.matrix<- matrix(runif(n * ncol(X)), nrow = n) <= pmutation
+    for(i in seq(1,n)){
+      parents<- X[sample(1:elitism, 2, replace = FALSE),]
+      for(j in seq(1,ncol(X_new))){
+        if(mutation.matrix[i,j]){
+          if(j <= 11){
+            X_new[i,j]<- runif(1, min = limits[j,1], max = limits[j,2])
+          }else{
+            X_new[i,j]<- sdi.sampler(j - 11, 1, sdi_init)
+          }
+        }else{
+          X_new[i,j]<- sample(c(parents[1,j],parents[2,j], mean(parents[,j])), 
+                              1, prob = c(rep(0.5 * (1 - pcrossover), 2),
+                                          pcrossover))
+        }
+      }
+    }
+    X<- X_new
+    Y<- numeric(n)
+    delta_t<- numeric(n)
+    for(i in seq(1,n)){
+      if(isTRUE(sdi)){
+        sdi.pars<- X[i,12:21]
+        sdi.pars[1]<- stoch.round(sdi.pars[1])
+      }else{
+        sdi.pars<- FALSE
+      }
+      tic()
+      Y[i]<- wrapper_interior(sdi = sdi.pars, X[i,1], stoch.round(X[i,2]), 
+                              stoch.round(X[i,3]), stoch.round(X[i,4]), X[i,5], 
+                              X[i,6], as.logical(stoch.round(X[i,7])), X[i,8], 
+                              X[i,9], X[i,10], X[i,11],
+                              inputdf = inputdf, y = y, est.type = est_type, 
+                              alpha = alpha, cv = cv, no.trees = no_trees,
+                              no.threads = no_threads, 
+                              early.stopping = early_stopping, seed = seed)
+      im<- toc()
+      delta_t[i]<- im$toc - im$tic
+    }
+    Y_round<- signif(Y, digits = digits[s])
+    generation.results<- as.data.frame(cbind(X, Y, Y_round, delta_t))|>
+      arrange(Y_round,delta_t)
+    results[[s]]<- generation.results
+    if(generation.results$Y_round[1] <= best.in.class$Y_round[1] & 
+       generation.results$delta_t[1] < best.in.class$delta_t[1]){
+      best.in.class<- generation.results[1,]
+    }
+  }
+  
+  results$best_in_class<- best.in.class
+  return(results)
+}
+
+sdi.sampler<- function(i, no.samples, sdi_init){
+  if(i==1){
+    1 + rbetabinom.ab(no.samples, 20, 1.2, 1.2 * 13/7) #no. lags
+  }else if(i==2){
+    runif(no.samples, min = 0, max = 3) #shape1
+  }else if(i==3){
+    runif(no.samples, min = 1, max = 8) #shape2
+  }else if(i>3){
+    rnorm(no.samples, mean = sdi_init[i], sd = 0.25) #theta1-3, rho1-3, tau
+  }
+}
+
+ga2model<- function(ga.list, inputdf, y, est.type, alpha = 0.5,
+                    no.trees = 100L, no.threads = 4L, seed = NA){
+  # trains the best model specified by the "genetic.algorithm" function. It is based on wrapper_interior, similar to genetic.algorithm.
+  # ga.list is an output list extracted from the function "genetic.algorithm".
+  # other parameters are equal to wrapper_interior parameters.
+  params<- ga.list$best_in_class
+  if(ncol(params)==24){
+    sdi.params<- c(params$no.lags, params$sdi.alpha, params$sdi.beta, 
+                   params$theta_1, params$theta_2, params$theta_3, params$rho_1,
+                   params$rho_2, params$rho_3, params$tau)
+  }else{
+    sdi.params<- FALSE
+  }
+  out<- wrapper_interior(sdi = sdi.params, lr = params$lr, 
+                         no.leaves = round(params$no.leaves), 
+                         max.depth = round(params$max.depth),
+                         min.data.in.leaf = round(params$min.data.in.leaf),
+                         feature.fraction = params$feature.fraction,
+                         cat.l2 = params$cat.l2,
+                         extra.trees = as.logical(round(params$extra.trees)),
+                         top.rate = params$top.rate, 
+                         other.rate = params$other.rate, 
+                         cat.smooth = params$cat.smooth, 
+                         path.smooth = params$path.smooth,
+                         inputdf = inputdf, y = y, est.type = est.type, 
+                         alpha = alpha, cv = 1L, no.trees = no.trees, 
+                         no.threads = no.threads)
+  return(out)
 }

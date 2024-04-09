@@ -1,6 +1,10 @@
 #######descriptive plots#######
 
 library(ggplot2)
+############## TO DO ##############
+# Weather Plots
+# Daylight Plots
+# Age distribution
 
 #prepare data
 

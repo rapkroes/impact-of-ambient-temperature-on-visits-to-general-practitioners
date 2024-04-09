@@ -16,6 +16,7 @@ library(parallel)
 library(lightgbm)
 library(VGAM)
 library(Matrix)
+library(tictoc)
 ```
 ```{r}
 
@@ -134,7 +135,7 @@ full.df_1.2$female<- full.df_1.2$Weibl
 full.df_1.3<- full.df_1.2[gender.selector,]|>
   select(-Weibl,-Maennl,-Transgen,-Divers,-Geschlundef)
 #add PKV (private health insurance) dummy
-full.df_1.3$PKV<- IK2PKV(full.df_1.3$IK)
+full.df_1.3$PKV[full.df_1.3$stamm.is.there==1]<- IK2PKV(full.df_1.3$IK[full.df_1.3$stamm.is.there==1])
 #add Landkreis_id
 full.df_1.3$landkreis<- praxisID2location(full.df_1.3$PraxisID)
 if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
@@ -186,215 +187,295 @@ if(make.saves){
   write.csv2(full.df_7, file = "final_df.csv", row.names = FALSE)
 }
 ```
+Table 1 (descriptive statistics):
+```{r}
+table_1<- data.frame(Metric = c("Total number of patients",
+                                "First date",
+                                "Last date",
+                                "Total number of observations",
+                                "Number of chronically diseased patients",#5
+                                "Percentage chronically diseased patients",
+                                "Number of practices",
+                                "Age of the youngest patient",
+                                "Age of oldest patient",
+                                "Median patient age",#10
+                                "Percentage directly cold related injuries",
+                                "Percentage injuries due to excessive heat",
+                                "Percentage major cardiovascular disease",
+                                "Percentage external causes of morbidity",
+                                "Percentag mental and behavioural disorders",#15
+                                "Percentage diseases of the respiratory system",
+                                "Percentage endocrine, nutritional, and metabolic disorders",
+                                "Percentage diseases of the digestive system",
+                                "Percentage genitourinary disorders",
+                                "Percentage musculoskeletal disorders",#20
+                                "Percentage other diseases and injuries",
+                                "Number of privately insured individuals",
+                                "Number of not privately insured individuals",
+                                "Percentage of privately insured individuals",
+                                "Percentage of not privately insured individuals",#25
+                                "Number of incidents by privately insured individuals",
+                                "Number of incidents by not privately insured individuals",
+                                "Percentage of incidents by privately insured individuals",
+                                "Percentage of incidents by not privately insured individuals",
+                                "Number of retired patients",#30
+                                "Percentage of retired patients",
+                                "Number of incidents of retired patients",
+                                "Percentage of incidents of retired patients",
+                                "Percentage self-recorded smokers",
+                                "Percentage self-recorded alcohol consumer",#35
+                                "Percentage self-recorded participation in sports"
+                                ),
+                     Value = c(length(unique(full.df_7$uniPatID)),
+                               TG_DateNum2date(min(full.df_7$TG_DateNum)),
+                               TG_DateNum2date(max(full.df_7$TG_DateNum)),
+                               nrow(full.df_7),
+                               length(unique(chronic.df$uniPatID)),#5
+                               length(unique(chronic.df$uniPatID)) / length(unique(full.df_7$uniPatID)),
+                               length(unique(full.df_7$PraxisID)),
+                               min(full.df_7$age, na.rm = TRUE),
+                               max(full.df_7$age, na.rm = TRUE),
+                               median(full.df_7$age, na.rm = TRUE),#10
+                               mean(full.df_7$diag_class==1),
+                               mean(full.df_7$diag_class==2),
+                               mean(full.df_7$diag_class==3),
+                               mean(full.df_7$diag_class==4),
+                               mean(full.df_7$diag_class==5),#15
+                               mean(full.df_7$diag_class==6),
+                               mean(full.df_7$diag_class==7),
+                               mean(full.df_7$diag_class==8),
+                               mean(full.df_7$diag_class==9),
+                               mean(full.df_7$diag_class==10),#20
+                               mean(full.df_7$diag_class==11),
+                               length(unique(full.df_7$uniPatID[full.df_7$PKV==1])),
+                               length(unique(full.df_7$uniPatID[full.df_7$PKV==0])),
+                               length(unique(full.df_7$uniPatID[full.df_7$PKV==1])) / length(unique(full.df_7$uniPatID)),
+                               length(unique(full.df_7$uniPatID[full.df_7$PKV==0])) / length(unique(full.df_7$uniPatID)),#25
+                               length((full.df_7$uniPatID[full.df_7$PKV==1])),
+                               length((full.df_7$uniPatID[full.df_7$PKV==0])),
+                               length((full.df_7$uniPatID[full.df_7$PKV==1])) / length((full.df_7$uniPatID)),
+                               length((full.df_7$uniPatID[full.df_7$PKV==0])) / length((full.df_7$uniPatID)),
+                               length(unique(full.df_7$uniPatID[full.df_7$Status_R==1])),#30
+                               length(unique(full.df_7$uniPatID[full.df_7$Status_R==1])) / length(unique(full.df_7$uniPatID)),
+                               sum(full.df_7$Status_R, na.rm = TRUE),
+                               mean(full.df_7$Status_R, na.rm = TRUE),
+                               mean(full.df_7$smoking[!duplicated(full.df_7$uniPatID)], na.rm = TRUE),
+                               mean(full.df_7$alcohol[!duplicated(full.df_7$uniPatID)], na.rm = TRUE),#35
+                               mean(full.df_7$sport[!duplicated(full.df_7$uniPatID)], na.rm = TRUE)
+                               ))
+write.table(table_1, file = "table_1.csv", sep = "; ", row.names = FALSE)
+
+```
+
+
 Research Question 1:
 ```{r}
+#Hyperparameter tuning
+hyperpars_age<- genetic.algorithm(optim.seed = 4567, n = 50, 
+                                    pcrossover = 0.8, pmutation = 0.1, 
+                                    maxiter = 3, elitism = 4,
+                                    sdi = TRUE, lr = c(0,1), 
+                                    no.leaves = c(2,40), max.depth = c(1,10),
+                                    min.data.in.leaf = c(2,1e7), 
+                                    feature.fraction = c(0,1), cat.l2 = c(0,99),
+                                    extra.trees = c(0,1), top.rate = c(0,0.5),
+                                    other.rate = c(0,0.5), cat.smooth = c(0,99),
+                                    path.smooth = c(0,99),
+                                    inputdf = df_qx(di = "SDI", q = 1),
+                                    y = full.df_7$age, est_type = "quantile",
+                                    alpha = 0.5, cv = 2L, no_trees = 100L,
+                                    no_threads = 4L, early_stopping = 10L)
+if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
+#add a later increase in number of significant digits
 
-```
+hyperpars_gender<- genetic.algorithm(optim.seed = 4567, n = 50, 
+                                    pcrossover = 0.8, pmutation = 0.1, 
+                                    maxiter = 3, elitism = 4, digits = c(2,3,3),
+                                    sdi = TRUE, lr = c(0,1), 
+                                    no.leaves = c(2,40), max.depth = c(1,10),
+                                    min.data.in.leaf = c(2,1e7), 
+                                    feature.fraction = c(0,1), cat.l2 = c(0,99),
+                                    extra.trees = c(0,1), top.rate = c(0,0.5),
+                                    other.rate = c(0,0.5), cat.smooth = c(0,99),
+                                    path.smooth = c(0,99),
+                                    inputdf = df_qx(di = "SDI", q = 1),
+                                    y = full.df_7$female, est_type = "binary",
+                                    alpha = 0.5, cv = 2L, no_trees = 100L,
+                                    no_threads = 4L, early_stopping = 10L)
+if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
 
-```{r}
+hyperpars_phi<- genetic.algorithm(optim.seed = 4567, n = 50, 
+                                    pcrossover = 0.8, pmutation = 0.1, 
+                                    maxiter = 3, elitism = 4, digits = c(2,3,3),
+                                    sdi = TRUE, lr = c(0,1), 
+                                    no.leaves = c(2,40), max.depth = c(1,10),
+                                    min.data.in.leaf = c(2,1e7), 
+                                    feature.fraction = c(0,1), cat.l2 = c(0,99),
+                                    extra.trees = c(0,1), top.rate = c(0,0.5),
+                                    other.rate = c(0,0.5), cat.smooth = c(0,99),
+                                    path.smooth = c(0,99),
+                                    inputdf = df_qx(di = "SDI", q = 1),
+                                    y = full.df_7$PKV, est_type = "binary",
+                                    alpha = 0.5, cv = 2L, no_trees = 100L,
+                                    no_threads = 4L, early_stopping = 10)
+if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
 
-```
-
-```{r}
-###estimate age quantiles
-##tune lambda
-tuning.wrapper<- function(lambda_value, alpha_value, lc_1, lc_2){
-  out<- list()
-  out$Score<- elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$age, spline.pos = 1, spline.knots = 4, sel.loss.function = "quantile", sel.quantile = 0.5, alpha = alpha_value, lambda = lambda_value, lc.rho = c(lc_1, lc_2), max.iter = 75)$loss_new
-}
-
-tuning.wrapper_2<- function(params){
-  lambda_value<- 1/(1+exp(params[1]))
-  alpha_value<- 1/(1+exp(params[2]))
-  lc_1<- 5/(1+exp(params[3]))
-  lc_2<- 5/(1+exp(params[4]))
-  out<- elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$age, spline.pos = 1, spline.knots = 4, sel.loss.function = "quantile", sel.quantile = 0.5, alpha = alpha_value, lambda = lambda_value, lc.rho = c(lc_1, lc_2), max.iter = 75)$loss_new
-}
-tic()
-tuning_results<- optim(par = rep(log(4),4), fn = tuning.wrapper_2, method = "Nelder-Mead",
-                       control = list(maxit = 20))
-toc()#925 sec
-tic()
-tuning_results<- optim(par = rep(log(4),4), fn = tuning.wrapper_2, method = "SANN",
-                       control = list(maxit = 20))
-toc()
-
-tic()
-age.6.1000<- elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$age, spline.pos = 1, spline.knots = 4, sel.loss.function = "quantile", sel.quantile = 0.5, alpha = .1, lambda = .5, tol = 1e-6, max.iter = 1000, lc.rho = 2)
-toc()
-tic()
-age.6.75<- elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$age, spline.pos = 1, spline.knots = 4, sel.loss.function = "quantile", sel.quantile = 0.5, alpha = .1, lambda = .5, tol = 1e-6, max.iter = 75, lc.rho = 2)
-toc()
-###########################here
-tic()
-age.6.75<- elastic.net_speed(inputdf = rhs_Thom_q1, y= full.df_7$age, spline.pos = 1, spline.knots = 4, sel.loss.function = "quantile", sel.quantile = 0.5, alpha = .1, lambda = 10, tol = 1e-6, max.iter = 50, lc.rho = 100)
-toc()
-
-its<- seq(10,100, by=20)
-losses<- numeric(length(its))
-for(i in seq_along(its)){
-  losses[i]<- elastic.net_speed(inputdf = rhs_Thom_q1, y= full.df_7$age, spline.pos = 1, spline.knots = 4, sel.loss.function = "quantile", sel.quantile = 0.5, alpha = .1, lambda = 10, tol = 1e-6, max.iter = its[i], lc.rho = 100)$loss_new
-}
-plot(losses~its)
-
-
-tic()
-age.6.75<- elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$age, spline.pos = 1, spline.knots = 4, sel.loss.function = "quantile", sel.quantile = 0.5, alpha = .1, lambda = .5, tol = 1e-6, max.iter = 75, lc.rho = c(2.9,0.0075))
-toc()
-
-
-tic()
-attempt.p.6.1000<- elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$female, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .5, tol = 1e-6, max.iter = 1000)
-toc()
-tic()
-elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$female, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .5, tol = 1e-6, max.iter = 100)
-toc()
-tic()
-elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$female, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .5, tol = 1e-4, max.iter = 100)
-toc()
-
-
-tic()
-attempt.p.4.75<- elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$female, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .2, tol = 1e-4, max.iter = 75)
-toc()
-tic()
-attempt.p.5.75<- elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$female, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .1, tol = 1e-5, max.iter = 75)
-toc()
-tic()
-attempt.p.6.75<- elastic.net(inputdf = rhs_Thom_q1, y= full.df_7$female, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .1, tol = 1e-6, max.iter = 75)
-toc()
-
-tuning.wrapper(0.5,0.1,1,1,0.0001)
-for(i in 1:11){
-  print(i)
-  tuning.wrapper(seq(0,1,0.1)[i],0.1,1,1,0.0001)
-}
-library(tictoc)
-library(ParBayesianOptimization)
-tic()
-trial_bo<- bayesOpt(FUN = tuning.wrapper,
-                    bounds = list(lambda_value = c(0,1),
-                                  alpha_value = c(0,0.5),
-                                  lc_1 = c(0,5),
-                                  lc_2 = c(0,5)),
-                    initPoints = 5,
-                    errorHandling = "continue", plotProgress = TRUE, verbose = 2)
-toc()
+hyperpars_chronic<- genetic.algorithm(optim.seed = 4567, n = 50, 
+                                    pcrossover = 0.8, pmutation = 0.1, 
+                                    maxiter = 3, elitism = 4, digits = c(2,3,3),
+                                    sdi = TRUE, lr = c(0,1), 
+                                    no.leaves = c(2,40), max.depth = c(1,10),
+                                    min.data.in.leaf = c(2,1e7), 
+                                    feature.fraction = c(0,1), cat.l2 = c(0,99),
+                                    extra.trees = c(0,1), top.rate = c(0,0.5),
+                                    other.rate = c(0,0.5), cat.smooth = c(0,99),
+                                    path.smooth = c(0,99),
+                                    inputdf = df_qx(di = "SDI", q = 1),
+                                    y = full.df_7$no_all_chronic_diseases, 
+                                    est_type = "quantile", alpha = 0.5, cv = 2L,
+                                    no_trees = 100L, no_threads = 4L, 
+                                    early_stopping = 10L)
+if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
 ```
 ```{r}
-# plot effect of TDI
-tdi.effect<- function(x,beta,cuts){
-  params<- as.vector(beta[grepl("thoms_discomfort_index",colnames(beta))])
-  names(params)<- colnames(beta)[grepl("thoms_discomfort_index",colnames(beta))]
-  for(i in seq_along(params)){
-    varname<- substr(names(params)[i],nchar(names(params)[i])-2,nchar(names(params)[i]))
-    assign(varname,params[i])
-  }
-  out<- numeric(length(x))
-  cuts_abridged<- cuts[2:(length(cuts)-1)]
-  for(i in seq_along(out)){
-    if(x[i]<min(cuts_abridged)){
-      out[i]<- a_1*x[i]+b_1
-    }else if(x[i]>max(cuts_abridged)){
-      no<- length(cuts)-1
-      out[i]<- get(paste0("a_",no))*x[i]+get(paste0("b_",no))
-    }else{
-      no<- 1+sum(x[i]>=cuts_abridged)
-      out[i]<- get(paste0("a_",no))*x[i]^3+get(paste0("b_",no))*x[i]^2+get(paste0("c_",no))*x[i]+get(paste0("d_",no))
-    }
-  }
-  return(out)
-}
-grid<- seq(-3.2,2.1, length.out=1000)
-effect_1<- tdi.effect(grid, attempt.p.4.75$beta,attempt.p.4.75$cuts_1)
-effect_2<- tdi.effect(grid, attempt.p.5.75$beta,attempt.p.4.75$cuts_1)
-effect_3<- tdi.effect(grid, attempt.p.6.75$beta,attempt.p.4.75$cuts_1)
-plot(effect_1~grid, type="l", ylim= c(-31,5))
-plot(effect_1~grid, type="l", ylim= c(-31,5))+
-  abline(v=attempt.p.4.75$cuts_1)
-plot(effect_2~grid, type="l", ylim= c(-31,5))
-plot(effect_2~grid, type="l", ylim= c(-31,5))+
-  abline(v=attempt.p.4.75$cuts_1)
-plot(effect_3~grid, type="l", ylim= c(-31,5))
-plot(effect_3~grid, type="l", ylim= c(-31,5))+
-  abline(v=attempt.p.4.75$cuts_1)
-t(rbind(attempt.p.4.75$beta,attempt.p.5.75$beta,attempt.p.6.75$beta))
+# training of individual models: SDI
+model_age.05_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
+                     y = full.df_7$age, est.type = "quantile", alpha = 0.05,
+                     no.trees = 100L, no.threads = 4L)
+model_age.25_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
+                     y = full.df_7$age, est.type = "quantile", alpha = 0.25,
+                     no.trees = 100L, no.threads = 4L)
+model_age.50_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
+                     y = full.df_7$age, est.type = "quantile", alpha = 0.5,
+                     no.trees = 100L, no.threads = 4L)
+model_age.75_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
+                     y = full.df_7$age, est.type = "quantile", alpha = 0.75,
+                     no.trees = 100L, no.threads = 4L)
+model_age.95_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
+                     y = full.df_7$age, est.type = "quantile", alpha = 0.95,
+                     no.trees = 100L, no.threads = 4L)
 
-#effect_4<- tdi.effect(grid, age.6.1000$beta,age_1$cuts_1)
-effect_5<- tdi.effect(grid, age.6.75$beta,age_1$cuts_1)
-#plot(effect_4~grid, type="l")
-plot(effect_5~grid, type="l")
-plot(effect_5~grid, type="l")+
-  abline(v=attempt.p.4.75$cuts_1)
+model_gender_SDI<- ga2model(hyperpars_gender, inputdf = df_qx(di = "SDI", q = 1),
+                     y = full.df_7$female, est.type = "binary",
+                     no.trees = 100L, no.threads = 4L)
+
+model_phi_SDI<- ga2model(hyperpars_gender, inputdf = df_qx(di = "SDI", q = 1),
+                     y = full.df_7$PKV, est.type = "binary",
+                     no.trees = 100L, no.threads = 4L)
+
+model_chronic.05_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
+                     y = full.df_7$no_all_chronic_diseases, 
+                     est.type = "quantile", alpha = 0.05, no.trees = 100L, 
+                     no.threads = 4L)
+model_chronic.25_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
+                     y = full.df_7$no_all_chronic_diseases, 
+                     est.type = "quantile", alpha = 0.25, no.trees = 100L, 
+                     no.threads = 4L)
+model_chronic.50_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
+                     y = full.df_7$no_all_chronic_diseases, 
+                     est.type = "quantile", alpha = 0.5, no.trees = 100L, 
+                     no.threads = 4L)
+model_chronic.75_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
+                     y = full.df_7$no_all_chronic_diseases, 
+                     est.type = "quantile", alpha = 0.75, no.trees = 100L, 
+                     no.threads = 4L)
+model_chronic.95_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
+                     y = full.df_7$no_all_chronic_diseases, 
+                     est.type = "quantile", alpha = 0.95, no.trees = 100L, 
+                     no.threads = 4L)
+
+# training of individual models: TDI
+model_age.05_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
+                     y = full.df_7$age, est.type = "quantile", alpha = 0.05,
+                     no.trees = 100L, no.threads = 4L)
+model_age.25_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
+                     y = full.df_7$age, est.type = "quantile", alpha = 0.25,
+                     no.trees = 100L, no.threads = 4L)
+model_age.50_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
+                     y = full.df_7$age, est.type = "quantile", alpha = 0.5,
+                     no.trees = 100L, no.threads = 4L)
+model_age.75_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
+                     y = full.df_7$age, est.type = "quantile", alpha = 0.75,
+                     no.trees = 100L, no.threads = 4L)
+model_age.95_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
+                     y = full.df_7$age, est.type = "quantile", alpha = 0.95,
+                     no.trees = 100L, no.threads = 4L)
+
+model_gender_TDI<- ga2model(hyperpars_gender, inputdf = df_qx(di = "TDI", q = 1),
+                     y = full.df_7$female, est.type = "binary",
+                     no.trees = 100L, no.threads = 4L)
+
+model_phi_TDI<- ga2model(hyperpars_gender, inputdf = df_qx(di = "TDI", q = 1),
+                     y = full.df_7$PKV, est.type = "binary",
+                     no.trees = 100L, no.threads = 4L)
+
+model_chronic.05_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
+                     y = full.df_7$no_all_chronic_diseases, 
+                     est.type = "quantile", alpha = 0.05, no.trees = 100L, 
+                     no.threads = 4L)
+model_chronic.25_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
+                     y = full.df_7$no_all_chronic_diseases, 
+                     est.type = "quantile", alpha = 0.25, no.trees = 100L, 
+                     no.threads = 4L)
+model_chronic.50_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
+                     y = full.df_7$no_all_chronic_diseases, 
+                     est.type = "quantile", alpha = 0.5, no.trees = 100L, 
+                     no.threads = 4L)
+model_chronic.75_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
+                     y = full.df_7$no_all_chronic_diseases, 
+                     est.type = "quantile", alpha = 0.75, no.trees = 100L, 
+                     no.threads = 4L)
+model_chronic.95_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
+                     y = full.df_7$no_all_chronic_diseases, 
+                     est.type = "quantile", alpha = 0.95, no.trees = 100L, 
+                     no.threads = 4L)
+
+# training of individual models: HW
+model_age.05_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
+                     y = full.df_7$age, est.type = "quantile", alpha = 0.05,
+                     no.trees = 100L, no.threads = 4L)
+model_age.25_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
+                     y = full.df_7$age, est.type = "quantile", alpha = 0.25,
+                     no.trees = 100L, no.threads = 4L)
+model_age.50_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
+                     y = full.df_7$age, est.type = "quantile", alpha = 0.5,
+                     no.trees = 100L, no.threads = 4L)
+model_age.75_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
+                     y = full.df_7$age, est.type = "quantile", alpha = 0.75,
+                     no.trees = 100L, no.threads = 4L)
+model_age.95_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
+                     y = full.df_7$age, est.type = "quantile", alpha = 0.95,
+                     no.trees = 100L, no.threads = 4L)
+
+model_gender_HW<- ga2model(hyperpars_gender, inputdf = df_qx(di = "HW", q = 1),
+                     y = full.df_7$female, est.type = "binary",
+                     no.trees = 100L, no.threads = 4L)
+
+model_phi_HW<- ga2model(hyperpars_gender, inputdf = df_qx(di = "HW", q = 1),
+                     y = full.df_7$PKV, est.type = "binary",
+                     no.trees = 100L, no.threads = 4L)
+
+model_chronic.05_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
+                     y = full.df_7$no_all_chronic_diseases, 
+                     est.type = "quantile", alpha = 0.05, no.trees = 100L, 
+                     no.threads = 4L)
+model_chronic.25_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
+                     y = full.df_7$no_all_chronic_diseases, 
+                     est.type = "quantile", alpha = 0.25, no.trees = 100L, 
+                     no.threads = 4L)
+model_chronic.50_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
+                     y = full.df_7$no_all_chronic_diseases, 
+                     est.type = "quantile", alpha = 0.5, no.trees = 100L, 
+                     no.threads = 4L)
+model_chronic.75_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
+                     y = full.df_7$no_all_chronic_diseases, 
+                     est.type = "quantile", alpha = 0.75, no.trees = 100L, 
+                     no.threads = 4L)
+model_chronic.95_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
+                     y = full.df_7$no_all_chronic_diseases, 
+                     est.type = "quantile", alpha = 0.95, no.trees = 100L, 
+                     no.threads = 4L)
+
+
 ```
-
-
-
-
-
-
-```{r}
-#simulate if it works
-
-set.seed(561351)
-param.sim_1<- rt(ncol(rhs_Thom_q1),8)
-var.sim_1<- as.vector(round(1/(1+exp(-1*as.matrix(rhs_Thom_q1)%*%param.sim_1+rt(nrow(rhs_Thom_q1),9)))))
-names(param.sim_1)<- colnames(rhs_Thom_q1)
-
-res.sim_1<- elastic.net(rhs_Thom_q1,var.sim_1, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .1, tol = 1e-6, max.iter = 75)
-
-param.sim_1
-res.sim_1$beta
-
-n_mc<- 50
-bootstrap.params<- matrix(0,nrow = n_mc,ncol = 49)
-for(i in 1:n_mc){
-  selector<- sample(1:nrow(rhs_Thom_q1),nrow(rhs_Thom_q1), replace = TRUE)
-  bootstrap.sample<- rhs_Thom_q1[selector,]
-  bootstrap.params[i,]<- elastic.net(bootstrap.sample,var.sim_1[selector], spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .1, tol = 1e-6, max.iter = 75)$beta
-}
-colnames(bootstrap.params)<- colnames(res.sim_1$beta)
-
-min.vec<- apply(bootstrap.params,2,min)[1:33]
-max.vec<- apply(bootstrap.params,2,max)[1:33]
-base<- c(param.sim_1[2:33],0)
-found.within<- base>=min.vec & base<=max.vec
-cbind(min.vec,max.vec,base,found.within)
-
-
-####################sim 2####################################
-set.seed(561351)
-param.sim_2<- rt(ncol(rhs_Thom_q1),8)
-ict<-rt(1,8)
-var.sim_2<- as.vector(round(1/(1+exp(-1*as.matrix(rhs_Thom_q1)%*%param.sim_1+ict+rnorm(nrow(rhs_Thom_q1))))))
-names(param.sim_1)<- colnames(rhs_Thom_q1)
-
-res.sim_2<- elastic.net(rhs_Thom_q1,var.sim_1, spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = .1, tol = 1e-6, max.iter = 75)
-
-param.sim_2
-res.sim_2$beta
-
-n_mc<- 50
-bootstrap.params<- matrix(0,nrow = n_mc,ncol = 49)
-sim.cluster<- makeCluster(3)
-clusterExport(sim.cluster, varlist = c("elastic.net","rhs_Thom_q1","var.sim_2"))
-bootstrap.params_2<- parLapply(sim.cluster,1:n_mc,fun = function(k){
-  set.seed(k)
-  selector<- sample(1:nrow(rhs_Thom_q1),nrow(rhs_Thom_q1), replace = TRUE)
-  bootstrap.sample<- rhs_Thom_q1[selector,]
-  out<- elastic.net(bootstrap.sample,var.sim_2[selector], spline.pos = 1, spline.knots = 4, sel.loss.function = "proportion", alpha = .1, lambda = 0, tol = 1e-6, max.iter = 75)$beta
-  return(out)
-})
-b.params_2<- do.call(rbind, bootstrap.params_2)
-
-
-min.vec<- apply(b.params_2,2,min)[1:33]
-max.vec<- apply(b.params_2,2,max)[1:33]
-median.vec<- apply(b.params_2,2,median)[1:33]
-base<- param.sim_2[2:34]
-found.within<- base>=min.vec & base<=max.vec
-cbind(min.vec,max.vec,base,median.vec,found.within)
-
-```
-
 
