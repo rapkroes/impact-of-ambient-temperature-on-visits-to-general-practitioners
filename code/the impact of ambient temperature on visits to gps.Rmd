@@ -476,6 +476,35 @@ model_chronic.95_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
                      est.type = "quantile", alpha = 0.95, no.trees = 100L, 
                      no.threads = 4L)
 
+name_outcome<- c("age", "gender", "phi", "chronic")
+di.type<- c("TDI", "HW", "SDI")
+outcome.df<- data.frame(age = full.df_7$age, gender = full.df_7$female,
+                        phi = full.df_7$PKV, 
+                        chronic = full.df_7$no_all_chronic_diseases)
 
+```
+```{r}
+# performance eval
+# eval of output
+
+```
+Research question 2:
+```{r}
+#Hyperparameter tuning
+hyperpars_q2<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8, 
+                                 pmutation = 0.1, maxiter = 3, elitism = 4, 
+                                 digits = c(2,3,3), sdi = TRUE, lr = c(0,1), 
+                                 no.leaves = c(2,40), max.depth = c(1,10), 
+                                 min.data.in.leaf = c(2,1e7), 
+                                 feature.fraction = c(0,1), cat.l2 = c(0,99), 
+                                 extra.trees = c(0,1), top.rate = c(0,0.5), 
+                                 other.rate = c(0,0.5), cat.smooth = c(0,99), 
+                                 path.smooth = c(0,99),
+                                 inputdf = df_qx(di = "SDI", q = 2),
+                                 y = as.factor(full.df_7$diag_class), 
+                                 est_type = "multiclass", cv = 2L, 
+                                 no_trees = 100L, no_threads = 4L, 
+                                 early_stopping = 10L)
+if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
 ```
 

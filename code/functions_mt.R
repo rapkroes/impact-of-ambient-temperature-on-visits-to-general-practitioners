@@ -14,7 +14,9 @@ icd10.to.class<- function(icd10vec){
   out<- numeric(length(icd10vec))
   
   for(i in seq_along(out)){
-    selector<- which(first[i]== classification.matrix$letter & no[i]>=classification.matrix$start_no& no[i]<=classification.matrix$end_no)
+    selector<- which(first[i] == classification.matrix$letter  &
+                       no[i] >= classification.matrix$start_no & 
+                       no[i] <= classification.matrix$end_no)
     if(length(selector)==0){
       out[i]<- 11
     }else if(length(selector)==1){
@@ -23,6 +25,7 @@ icd10.to.class<- function(icd10vec){
       stop(paste("For entry",i, "selector has a length longer than 1."))
     }
   }
+  out[grepl("P81.0", icd10vec)]<- 2
   
   return(out)
 }
@@ -639,7 +642,9 @@ wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth,
                             cat.smooth, path.smooth,
                             inputdf, y, est.type, alpha = 0.5, cv = 5L,
                             no.trees = 100L, no.threads = 4L, 
-                            early.stopping = 10L, seed = NA){
+                            early.stopping = 10L, seed = NA, 
+                            error.rate = FALSE){
+  browser()
   # Interior wrapper for cross-validation of the model. Returns the mean of the error estimated for each fold. If cv<=1, instead of cross validation, a model trained on the entire input data is returned (to be precise, a lgbBooster).
   # sdi is FALSE by default. If the suggested discomfort index is to be used, sdi has to be an atomic vector.
   # if sdi = TRUE:
@@ -719,6 +724,16 @@ wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth,
                     cat_smooth = cat.smooth,
                     path_smooth = path.smooth,
                     alpha = alpha)
+  if(est.type %in% c("binary")){
+    eval.metric<- list()
+    eval.metric[[1]]<- lossfct
+    eval.metric[[2]]<- "binary_error"
+  }else if(est.type %in% c("multiclass", "cross_entropy")){
+    parameters$num_class <- length(levels(y))
+    eval.metric<- list()
+    eval.metric[[1]]<- lossfct
+    eval.metric[[2]]<- "multi_error"
+  }
   
   if(cv>1){
     results<- list()
@@ -737,8 +752,11 @@ wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth,
                                obj = est.type,verbose = 1, record = TRUE,
                                categorical_feature = factor.vars, 
                                early_stopping_rounds = early.stopping,
-                               eval = lossfct)
+                               eval = eval.metric)
       out[i]<- results[[i]]$best_score
+      if(isTRUE(error.rate)){
+        out[i]<- results[[i]]$eval_valid()[[2]]$value
+      }
     }
     return(mean(out))
   }else{
@@ -898,13 +916,14 @@ ga2model<- function(ga.list, inputdf, y, est.type, alpha = 0.5,
   # ga.list is an output list extracted from the function "genetic.algorithm".
   # other parameters are equal to wrapper_interior parameters.
   params<- ga.list$best_in_class
-  if(ncol(params)==24){
+  if(colnames(inputdf)[1] %in% c("thoms_discomfort_index", "length_heatwave")){
+    sdi.params<- FALSE
+  }else{
     sdi.params<- c(params$no.lags, params$sdi.alpha, params$sdi.beta, 
                    params$theta_1, params$theta_2, params$theta_3, params$rho_1,
                    params$rho_2, params$rho_3, params$tau)
-  }else{
-    sdi.params<- FALSE
   }
+  
   out<- wrapper_interior(sdi = sdi.params, lr = params$lr, 
                          no.leaves = round(params$no.leaves), 
                          max.depth = round(params$max.depth),
