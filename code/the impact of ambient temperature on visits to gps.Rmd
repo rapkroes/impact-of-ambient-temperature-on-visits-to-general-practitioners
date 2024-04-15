@@ -501,10 +501,33 @@ hyperpars_q2<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8,
                                  other.rate = c(0,0.5), cat.smooth = c(0,99), 
                                  path.smooth = c(0,99),
                                  inputdf = df_qx(di = "SDI", q = 2),
-                                 y = as.factor(full.df_7$diag_class), 
+                                 y = full.df_7$diag_class - 1, 
                                  est_type = "multiclass", cv = 2L, 
                                  no_trees = 100L, no_threads = 4L, 
                                  early_stopping = 10L)
 if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
+
+model_q2_TDI<- ga2model(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2),
+                     y = full.df_7$diag_class - 1, est.type = "multiclass",
+                     no.trees = 100L, no.threads = 4L)
+model_q2_HW<- ga2model(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2),
+                     y = full.df_7$diag_class - 1, est.type = "multiclass",
+                     no.trees = 100L, no.threads = 4L)
+model_q2_SDI<- ga2model(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2),
+                     y = full.df_7$diag_class - 1, est.type = "multiclass",
+                     no.trees = 100L, no.threads = 4L)
+
+# performance eval
+perf_TDI<- ga2performance.eval(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2), 
+                    y = full.df_7$diag_class - 1, est.type = "multiclass",
+                    cv = 10)
+perf_HW<- ga2performance.eval(hyperpars_q2, inputdf = df_qx(di = "HW", q = 2), 
+                    y = full.df_7$diag_class - 1, est.type = "multiclass",
+                    cv = 10)
+perf_SDI<- ga2performance.eval(hyperpars_q2, inputdf = df_qx(di = "SDI", q = 2), 
+                    y = full.df_7$diag_class - 1, est.type = "multiclass",
+                    cv = 10)
+# eval of output
+
 ```
 

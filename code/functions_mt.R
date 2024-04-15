@@ -644,7 +644,6 @@ wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth,
                             no.trees = 100L, no.threads = 4L, 
                             early.stopping = 10L, seed = NA, 
                             error.rate = FALSE){
-  browser()
   # Interior wrapper for cross-validation of the model. Returns the mean of the error estimated for each fold. If cv<=1, instead of cross validation, a model trained on the entire input data is returned (to be precise, a lgbBooster).
   # sdi is FALSE by default. If the suggested discomfort index is to be used, sdi has to be an atomic vector.
   # if sdi = TRUE:
@@ -692,16 +691,15 @@ wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth,
                   rho = sdi[7:9], tau = sdi[10])
     
     col.selector<- grepl("temperature", colnames(inputdf)) | grepl("humidity", colnames(inputdf))
-    im<- cbind(inputdf[,!col.selector],sdi.vec)
-    colnames(im)<- c(colnames(inputdf)[!col.selector],"sdi")
-    im<- data.matrix(im)
-    factor.vars<- colnames(im)[!colnames(im) %in% blacklist]
-    df<- lgb.Dataset(data.matrix(inputdf),
-                     categorical_feature = factor.vars)
-  }else{
+    df<- inputdf[,!col.selector]
+    df$sdi<- sdi.vec
+    factor.vars<- colnames(df)[!colnames(df) %in% blacklist]
+    df<- data.matrix(df)
+  }else if(isFALSE(sdi)){
     factor.vars<- colnames(inputdf)[!colnames(inputdf) %in% blacklist]
-    df<- lgb.Dataset(data.matrix(inputdf),
-                     categorical_feature = factor.vars)
+    df<- data.matrix(inputdf)
+  }else{
+    stop(paste("wrapper_interior: sdi has to be either FALSE or a vector of sdi hyperparameters."))
   }
   
   if(!is.na(seed)){
@@ -709,27 +707,21 @@ wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth,
   }
   
   parameters<- list(objective = est.type, data_sample_strategy = "goss", 
-                    num_trees = no.trees,
-                    num_threads = no.threads,
-                    learning_rate = lr, num_leaves = no.leaves,
-                    use_missing = TRUE,
-                    zero_as_missing = FALSE,
-                    max_depth = max.depth,
-                    min_data_in_leaf = min.data.in.leaf,
-                    feature_fraction = feature.fraction,
-                    extra_trees = extra.trees,
-                    top_rate = top.rate,
-                    other_rate = other.rate,
-                    cat_l2 = cat.l2,
-                    cat_smooth = cat.smooth,
-                    path_smooth = path.smooth,
+                    num_trees = no.trees, num_threads = no.threads,
+                    learning_rate = lr, num_leaves = no.leaves, 
+                    use_missing = TRUE, zero_as_missing = FALSE,
+                    max_depth = max.depth, min_data_in_leaf = min.data.in.leaf,
+                    feature_fraction = feature.fraction, 
+                    extra_trees = extra.trees, top_rate = top.rate,
+                    other_rate = other.rate, cat_l2 = cat.l2, 
+                    cat_smooth = cat.smooth, path_smooth = path.smooth,
                     alpha = alpha)
-  if(est.type %in% c("binary")){
+  if(est.type == "binary"){
     eval.metric<- list()
     eval.metric[[1]]<- lossfct
     eval.metric[[2]]<- "binary_error"
-  }else if(est.type %in% c("multiclass", "cross_entropy")){
-    parameters$num_class <- length(levels(y))
+  }else if(est.type == "multiclass"){
+    parameters$num_class <- length(levels(as.factor(y)))
     eval.metric<- list()
     eval.metric[[1]]<- lossfct
     eval.metric[[2]]<- "multi_error"
@@ -737,32 +729,40 @@ wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth,
   
   if(cv>1){
     results<- list()
-    out<- numeric(cv)
+    score.vec<- numeric(cv)
+    error.rate.vec<- numeric(cv)
     for(i in seq(1,cv)){
       valid.selector<- seq(i, nrow(inputdf), by= cv)
-      df<- lgb.Dataset(data.matrix(inputdf)[-valid.selector,],
-                       label = y[-valid.selector])
-      valid.df<- lgb.Dataset(data.matrix(inputdf)[valid.selector,],
+      train.df<- lgb.Dataset(df[-valid.selector,],
                              categorical_feature = factor.vars,
-                             label = y[valid.selector],
-                             reference = df)
-      results[[i]]<- lgb.train(params = parameters, data = df, 
+                             label = y[-valid.selector])
+      valid.df<- lgb.Dataset.create.valid(dataset = train.df,
+                                          data = df[valid.selector,],
+                                          label = y[valid.selector])
+      results[[i]]<- lgb.train(params = parameters, data = train.df, 
                                nrounds = no.trees, 
                                valids = list(my_validation = valid.df), 
-                               obj = est.type,verbose = 1, record = TRUE,
+                               obj = est.type, verbose = -1, record = TRUE,
                                categorical_feature = factor.vars, 
                                early_stopping_rounds = early.stopping,
                                eval = eval.metric)
-      out[i]<- results[[i]]$best_score
+      score.vec[i]<- results[[i]]$best_score
       if(isTRUE(error.rate)){
-        out[i]<- results[[i]]$eval_valid()[[2]]$value
+        error.rate.vec[i]<- results[[i]]$eval_valid()[[2]]$value
       }
     }
-    return(mean(out))
+    if(isFALSE(error.rate)){
+      out<- mean(score.vec)
+      return(out)
+    }else{
+      out<- colMeans(data.frame(score = score.vec, error.pct = error.rate.vec))
+      return(out)
+    }
   }else{
-    out<- lgb.train(params = parameters, data = df, nrounds = no.trees, 
-                    obj = est.type,verbose = 1, record = TRUE,
-                    categorical_feature = factor.vars, eval = lossfct)
+    train.df<- lgb.Dataset(df, categorical_feature = factor.vars, label = y)
+    out<- lgb.train(params = parameters, data = train.df, nrounds = no.trees, 
+                    obj = est.type, verbose = 1, record = TRUE,
+                    categorical_feature = factor.vars, eval = eval.metric)
     return(out)
   }
 }
@@ -938,5 +938,41 @@ ga2model<- function(ga.list, inputdf, y, est.type, alpha = 0.5,
                          inputdf = inputdf, y = y, est.type = est.type, 
                          alpha = alpha, cv = 1L, no.trees = no.trees, 
                          no.threads = no.threads)
+  return(out)
+}
+
+ga2performance.eval<- function(ga.list, inputdf, y, est.type, no.trees = 100L, 
+                               no.threads = 4L, seed = NA, cv = 10){
+  # Measures the performance of the best model specified by the "genetic.algorithm" function.
+  # ga.list is an output list extracted from the function "genetic.algorithm".
+  # other parameters are equal to wrapper_interior parameters.
+  params<- ga.list$best_in_class
+  if(any(colnames(inputdf) %in% c("thoms_discomfort_index", "length_heatwave"))){
+    sdi.params<- FALSE
+  }else{
+    sdi.params<- c(params$no.lags, params$sdi.alpha, params$sdi.beta, 
+                   params$theta_1, params$theta_2, params$theta_3, params$rho_1,
+                   params$rho_2, params$rho_3, params$tau)
+  }
+  if(est.type %in% c("binary", "multiclass")){
+    error_rate<- TRUE
+  }else{
+    error_rate<- FALSE
+  }
+  
+  out<- wrapper_interior(sdi = sdi.params, lr = params$lr, 
+                         no.leaves = round(params$no.leaves), 
+                         max.depth = round(params$max.depth),
+                         min.data.in.leaf = round(params$min.data.in.leaf),
+                         feature.fraction = params$feature.fraction,
+                         cat.l2 = params$cat.l2,
+                         extra.trees = as.logical(round(params$extra.trees)),
+                         top.rate = params$top.rate, 
+                         other.rate = params$other.rate, 
+                         cat.smooth = params$cat.smooth, 
+                         path.smooth = params$path.smooth,
+                         inputdf = inputdf, y = y, est.type = est.type, 
+                         alpha = alpha, cv = cv, no.trees = no.trees, 
+                         no.threads = no.threads, error.rate = error_rate)
   return(out)
 }
