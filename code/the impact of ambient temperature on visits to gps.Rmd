@@ -519,16 +519,29 @@ model_q2_SDI<- ga2model(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2),
                      no.trees = 100L, no.threads = 4L)
 
 # performance eval
-perf_TDI<- ga2performance.eval(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2), 
+perf.q2_TDI<- ga2performance.eval(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2), 
                     y = full.df_7$diag_class - 1, est.type = "multiclass",
                     cv = 10)
-perf_HW<- ga2performance.eval(hyperpars_q2, inputdf = df_qx(di = "HW", q = 2), 
+perf.q2_HW<- ga2performance.eval(hyperpars_q2, inputdf = df_qx(di = "HW", q = 2), 
                     y = full.df_7$diag_class - 1, est.type = "multiclass",
                     cv = 10)
-perf_SDI<- ga2performance.eval(hyperpars_q2, inputdf = df_qx(di = "SDI", q = 2), 
+perf.q2_SDI<- ga2performance.eval(hyperpars_q2, inputdf = df_qx(di = "SDI", q = 2), 
                     y = full.df_7$diag_class - 1, est.type = "multiclass",
                     cv = 10)
-# eval of output
 
+# eval of output
+eval.var.names<- c( colnames(df_qx(di = "TDI", q = 2)))
+eval.sequence.list<- list(
+  TDI = seq(floor(min(full.df_7$thoms_discomfort_index)),
+            ceiling(full.df_7$thoms_discomfort_index)),
+                          )
+eval.list.q2.TDI.age<- booster.eval(model_q2_TDI, 
+                                inputdf = df_qx(di = "TDI", q = 2), 
+                                no.draws = 100, seed = 45846,
+                                eval.var = )
+im<- booster.eval(booster = model_q2_HW, DI = "SDI", 
+                  sdi = unlist(hyperpars_chronic$best_in_class[1, 12:21]), 
+                  Q = 2, no.draws = 100, eval.var = "no_all_chronic_diseases", 
+                  eval.seq = 20:29, seed = 681615, eval.type = "response")
 ```
 

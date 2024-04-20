@@ -9,7 +9,6 @@ booster.eval<- function(booster, inputdf, no.draws, eval.var, eval.seq, seed, ev
   # eval.seq is the vector of different values that are to be evaluated (the different values "X" may take)
   # seed is the random seed
   # eval.type prediction output type. Should be "response". For further details, check https://lightgbm.readthedocs.io/en/latest/R/reference/predict.lgb.Booster.html
-  library(lightgbm)
   set.seed(seed)
   initial.data<- inputdf[sample(seq(1,nrow(inputdf)),no.draws,replace = FALSE),]
   
@@ -68,6 +67,42 @@ eval.plot<- function(eval.list){
   }
 }
 eval.plot(x)
+
+eval.plot<- function(eval_list, y.max, plot.title, y.names = NA, 
+                     y.label = "density") {
+  # eval.plot takes list of simulated outcomes from booster.eval and plots the outcome on the y-axis.
+  # eval_list is a list of simulations created through the booster.eval function.
+  # y.max is the upper limit of the y-range of the plot
+  # plot.title is a character string which serves as the name of the plot
+  # y.names is a vector of names for the classes of the variable whose estimated density is shown on the y-axis. y.names is used in the creation of the plot title. If set to NA, the y.names argument is not considered in the creation of the plot title
+  # y.label is the label attached to the y-axis
+  k <- length(eval_list)
+  x.seq<- eval_list[[1]][,1]
+  for (i in 1:(ncol(eval_list[[1]]) - 1)) {
+    x<- eval_list[[1]][,1]
+    y<- eval_list[[1]][,i + 1]
+    if(any(is.na(y.names))){
+      plot.name<- plot.title
+    }else{
+      plot.name<- paste(plot.title, y.names[i], sep = ": ")
+    }
+    if(any(is.na(y.names))){
+      file.name<- paste0(plot.title, ".png")
+    }else{
+      file.name<- paste0(plot.title, "_", y.names[i], ".png")
+    }
+    png(file.name)
+    plot(y~x, type = 'l', xlab = colnames(eval_list[[1]])[1], ylab = y.label, 
+         main = plot.name, xlim = range(x.seq), ylim = c(0,y.max))
+    for (j in 2:k) {
+      lines(x = x, y = eval_list[[j]][,i + 1])
+    }
+    dev.off()
+  }
+}
+
+eval.plot(x, y.max = 1, plot.title = "Z plot", y.names = paste(rep("Var",11), 1:11))
+
 library(ggplot2)
 
 #ChatGPT
@@ -94,3 +129,113 @@ save_plots <- function(eval_list) {
   }
 }
 save_plots(x)
+
+model.eval<- function(booster, DI, sdi = FALSE, Q, no.draws, eval.var, eval.seq, 
+                      seed, eval.type = "response", eval_list, y.max, 
+                      plot.title, y.names = NA, y.label = "density"){
+  library(lightgbm)
+  set.seed(seed)
+  
+  inputdf<- df_qx(di = DI, q = Q)
+  blacklist<- c("thoms_discomfort_index", "length_heatwave", "sdi", 
+                "daylight_hours", "covid_7_day_incidence", "age", 
+                colnames(inputdf)[grep("chronic", colnames(inputdf))])
+  if(length(sdi)>1){
+    sdi.weights<- dbetabinom.ab(x = seq(0,sdi[1]), size = sdi[1],
+                                shape1 = sdi[2], shape2 = sdi[3])
+    sdi.vec<- SDI(df = inputdf, w = sdi.weights, theta = sdi[4:6],
+                  rho = sdi[7:9], tau = sdi[10])
+    
+    col.selector<- grepl("temperature", colnames(inputdf)) | grepl("humidity", colnames(inputdf))
+    df<- inputdf[,!col.selector]
+    df$sdi<- sdi.vec
+    factor.vars<- colnames(df)[!colnames(df) %in% blacklist]
+    df<- data.matrix(df)
+  }else if(isFALSE(sdi)){
+    factor.vars<- colnames(inputdf)[!colnames(inputdf) %in% blacklist]
+    df<- data.matrix(inputdf)
+  }else{
+    stop(paste("model.eval: sdi has to be either FALSE or a vector of sdi hyperparameters."))
+  }
+  
+  initial.data<- df[sample(seq(1, nrow(inputdf)), no.draws, replace = FALSE),]
+  eval.data<- as.data.frame(matrix(NA, nrow = no.draws * length(eval.seq),
+                                   ncol = ncol(df)))
+  colnames(eval.data)<- colnames(df)
+  eval.var.col<- which(colnames(eval.data)==eval.var)
+  for(i in seq_along(eval.seq)){
+    sel.rows<- seq(1, no.draws) + (i - 1) * no.draws
+    eval.data[sel.rows,]<- initial.data
+    eval.data[sel.rows,eval.var.col]<- eval.seq[i]
+  }
+  
+  prediction.output<- matrix(predict(object = booster, 
+                                     newdata = data.matrix(eval.data), 
+                                     type = eval.type),
+                             nrow = nrow(eval.data))
+  k<- ncol(prediction.output)
+  possible.var.names<- c("thoms_discomfort_index", "PraxisID", "dow",
+                         "public_holiday", "school_holiday", "week_of_month",
+                         "month", "year", "daylight_hours", 
+                         "covid_7_day_incidence", "age", "female", "PKV",
+                         "smoking", "alcohol", "sport", "chronic_1", 
+                         "chronic_2", "chronic_3", "chronic_4", "chronic_5", 
+                         "chronic_6", "chronic_7", "chronic_8", "chronic_9", 
+                         "chronic_10", "chronic_11", "no_all_chronic_diseases")
+  possible.xlab.names<- c("Thom's Discomfort Index", "practice", 
+                          "day of the week", "public holiday", "school holiday",
+                          "week of the month", "month", "year", 
+                          "daylight hours", "Covid-19 7-day-incidence", "age",
+                          "female", )
+  ##add special plot type for factor variables
+  for(l in seq(1, k)){
+    if(any(is.na(y.names))){
+      plot.name<- plot.title
+      file.name<- paste0(plot.title, ".png")
+    }else{
+      plot.name<- paste(plot.title, y.names[i], sep = ": ")
+      file.name<- paste0(plot.title, "_", y.names[i], ".png")
+    }
+    png(file.name)
+    sel<- seq(1, nrow(eval.data), by = no.draws)
+    plot(prediction.output[sel,]~eval.data[sel,], type = "l", xlab = )
+    for(i in seq(2, no.draws)){
+      
+    }
+  }
+  
+  out<- list()
+  for(i in seq(1,no.draws)){
+    selection<- seq(1, nrow(eval.data), by = no.draws)
+    im<- cbind(eval.data[selection, eval.var.col], prediction.output[selection,])
+    colnames(im)<- c(eval.var, paste(rep("pred_class", ncol(prediction.output)), 
+                                     seq(1, ncol(prediction.output)), 
+                                     sep = "_"))
+    out[[i]]<- im
+  }
+  return(out)
+  k <- length(eval_list)
+  x.seq<- eval_list[[1]][,1]
+  for (i in 1:(ncol(eval_list[[1]]) - 1)) {
+    x<- eval_list[[1]][,1]
+    y<- eval_list[[1]][,i + 1]
+    if(any(is.na(y.names))){
+      plot.name<- plot.title
+    }else{
+      plot.name<- paste(plot.title, y.names[i], sep = ": ")
+    }
+    if(any(is.na(y.names))){
+      file.name<- paste0(plot.title, ".png")
+    }else{
+      file.name<- paste0(plot.title, "_", y.names[i], ".png")
+    }
+    png(file.name)
+    plot(y~x, type = 'l', xlab = colnames(eval_list[[1]])[1], ylab = y.label, 
+         main = plot.name, xlim = range(x.seq), ylim = c(0,y.max))
+    for (j in 2:k) {
+      lines(x = x, y = eval_list[[j]][,i + 1])
+    }
+    dev.off()
+  }
+}
+
