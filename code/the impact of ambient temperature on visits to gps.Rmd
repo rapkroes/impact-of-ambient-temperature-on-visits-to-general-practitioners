@@ -126,7 +126,7 @@ chronic.df$diag_category<- icd10.to.class(chronic.df$diag_category)
 full.df_1<- add.chronic(Diag3[!chronic.sel,], chronic.df)
 full.df_1$diag_class<- icd10.to.class(full.df_1$icd10)
 full.df_1.1<- add.last.visit(full.df_1, no.splits = 50, no.workers = 4)
-if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
+if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ### stamm data
 full.df_1.2<- add.stamm.new.par(full.df_1.1,Stamm3,no.splits = 50, no.workers = 4)
@@ -139,13 +139,13 @@ full.df_1.3<- full.df_1.2[gender.selector,]|>
 full.df_1.3$PKV[full.df_1.3$stamm.is.there==1]<- IK2PKV(full.df_1.3$IK[full.df_1.3$stamm.is.there==1])
 #add Landkreis_id
 full.df_1.3$landkreis<- praxisID2location(full.df_1.3$PraxisID)
-if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
+if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ### konsul
 full.df_2<- add.konsul(full.df_1.3, Konsul3, no.splits = 50, no.workers = 4)
 col.selector<- !duplicated(colnames(full.df_2))
 full.df_2.2<- full.df_2[,col.selector]
-if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
+if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ### time
 full.df_3<- full.df_2.2
@@ -156,7 +156,7 @@ full.df_3$week_of_month<- as.factor(TG_DateNum2week.of.month(full.df_3$TG_DateNu
 full.df_3$month<- as.factor(TG_DateNum2month(full.df_3$TG_DateNum))
 full.df_3$year<- as.factor(TG_DateNum2year(full.df_3$TG_DateNum))
 full.df_3$age<- TG_DateNum2year(full.df_3$TG_DateNum)-full.df_3$Geburtsjahr
-if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
+if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ### covid-19
 full.df_4<- full.df_3
@@ -165,19 +165,19 @@ full.df_4<- full.df_4|>
   arrange(Landkreis_id,TG_DateNum)
 full.df_4.2<- add.covid(full.df_4,covid.data, no.workers = 4)
 full.df_4.2$covid_positive_incidence<- full.df_4.2$covid_7_day_incidence>0
-if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
+if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ### risk factors
 full.df_5<- full.df_4.2
 full.df_5$smoking<- risk.factor.merger(full.df_5$TG_A_Rauchen,full.df_5$TG_RF_Rauchen)
 full.df_5$alcohol<- risk.factor.merger(full.df_5$TG_A_Alkohol,full.df_5$TG_RF_Alkohol)
 full.df_5$sport<- risk.factor.merger(full.df_5$TG_A_Sport,full.df_5$TG_RF_Sport)
-if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
+if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ### add weather variables
 full.df_6<- full.df_5
 full.df_6<- add.weather(full.df_6, no.workers = 4)
-if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
+if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ###add daylight data
 full.df_7<- full.df_6
@@ -267,8 +267,6 @@ table_1<- data.frame(Metric = c("Total number of patients",
 write.table(table_1, file = "table_1.csv", sep = "; ", row.names = FALSE)
 
 ```
-
-
 Research Question 1:
 ```{r}
 #Hyperparameter tuning
@@ -286,7 +284,7 @@ hyperpars_age<- genetic.algorithm(optim.seed = 4567, n = 50,
                                     y = full.df_7$age, est_type = "quantile",
                                     alpha = 0.5, cv = 2L, no_trees = 100L,
                                     no_threads = 4L, early_stopping = 10L)
-if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
+if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 #add a later increase in number of significant digits
 
 hyperpars_gender<- genetic.algorithm(optim.seed = 4567, n = 50, 
@@ -303,7 +301,7 @@ hyperpars_gender<- genetic.algorithm(optim.seed = 4567, n = 50,
                                     y = full.df_7$female, est_type = "binary",
                                     alpha = 0.5, cv = 2L, no_trees = 100L,
                                     no_threads = 4L, early_stopping = 10L)
-if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
+if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 hyperpars_phi<- genetic.algorithm(optim.seed = 4567, n = 50, 
                                     pcrossover = 0.8, pmutation = 0.1, 
@@ -319,7 +317,7 @@ hyperpars_phi<- genetic.algorithm(optim.seed = 4567, n = 50,
                                     y = full.df_7$PKV, est_type = "binary",
                                     alpha = 0.5, cv = 2L, no_trees = 100L,
                                     no_threads = 4L, early_stopping = 10)
-if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
+if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 hyperpars_chronic<- genetic.algorithm(optim.seed = 4567, n = 50, 
                                     pcrossover = 0.8, pmutation = 0.1, 
@@ -336,158 +334,53 @@ hyperpars_chronic<- genetic.algorithm(optim.seed = 4567, n = 50,
                                     est_type = "quantile", alpha = 0.5, cv = 2L,
                                     no_trees = 100L, no_threads = 4L, 
                                     early_stopping = 10L)
-if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
-```
-```{r}
-# training of individual models: SDI
-model_age.05_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
-                     y = full.df_7$age, est.type = "quantile", alpha = 0.05,
-                     no.trees = 100L, no.threads = 4L)
-model_age.25_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
-                     y = full.df_7$age, est.type = "quantile", alpha = 0.25,
-                     no.trees = 100L, no.threads = 4L)
-model_age.50_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
-                     y = full.df_7$age, est.type = "quantile", alpha = 0.5,
-                     no.trees = 100L, no.threads = 4L)
-model_age.75_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
-                     y = full.df_7$age, est.type = "quantile", alpha = 0.75,
-                     no.trees = 100L, no.threads = 4L)
-model_age.95_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
-                     y = full.df_7$age, est.type = "quantile", alpha = 0.95,
-                     no.trees = 100L, no.threads = 4L)
+if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
-model_gender_SDI<- ga2model(hyperpars_gender, inputdf = df_qx(di = "SDI", q = 1),
-                     y = full.df_7$female, est.type = "binary",
-                     no.trees = 100L, no.threads = 4L)
+model.list_1<- list(age = "quantile", gender = "binary", phi = "binary",
+                    chronic = "quantile")
+model.list_2<- list(age = full.df_7$age, gender = full.df_7$female, 
+                    phi = full.df_7$PKV, 
+                    chronic = full.df_7$no_all_chronic_diseases)
+for(di in c("TDI", "HW", "SDI")){
+  for(model.ind in seq_along(model.list_1)){
+    if(model.list_1[[model.ind]] == "quantile"){
+      hyp<- get(paste0("hyperpars_", names(model.list_1)[model.ind]))
+      for(quant in c(".05", ".25", ".50", ".75", ".95")){
+        model.name<- paste0("model_", names(model.list_1)[model.ind], quant, 
+                            "_", di)
+        assign(model.name, ga2model(hyp, inputdf = df_qx(di = di, q = 1),
+                                    y = model.list_2[[model.ind]], 
+                                    est.type = "quantile", 
+                                    alpha = as.numeric(quant),
+                                    no.trees = 100L, no.threads = 4L))
+        perf.name<- paste0("perf.", names(model.list_1)[model.ind], quant, "_", 
+                           di)
+        assign(perf.name, ga2performance.eval(hyp, 
+                                              inputdf = df_qx(di = di, q = 1),
+                                              y = model.list_2[[model.ind]],
+                                              est.type = "quantile"))
+      }
+    }else{
+      model.name<- paste0("model_", names(model.list_1)[model.ind], "_", di)
+      hyp<- get(paste0("hyperpars_", names(model.list_1)[model.ind]))
+      assign(model.name, ga2model(hyp, inputdf = df_qx(di = di, q = 1),
+                                  y = model.list_2[[model.ind]],
+                                  est.type = "binary", 
+                                  alpha = as.numeric(quant),
+                                  no.trees = 100L, no.threads = 4L))
+      perf.name<- paste0("perf.", names(model.list_1)[model.ind], "_", di)
+      assign(perf.name, ga2performance.eval(hyp, 
+                                            inputdf = df_qx(di = di, q = 1),
+                                            y = model.list_2[[model.ind]],
+                                            est.type = "binary"))
+    }
+  }
+}
 
-model_phi_SDI<- ga2model(hyperpars_gender, inputdf = df_qx(di = "SDI", q = 1),
-                     y = full.df_7$PKV, est.type = "binary",
-                     no.trees = 100L, no.threads = 4L)
 
-model_chronic.05_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
-                     y = full.df_7$no_all_chronic_diseases, 
-                     est.type = "quantile", alpha = 0.05, no.trees = 100L, 
-                     no.threads = 4L)
-model_chronic.25_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
-                     y = full.df_7$no_all_chronic_diseases, 
-                     est.type = "quantile", alpha = 0.25, no.trees = 100L, 
-                     no.threads = 4L)
-model_chronic.50_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
-                     y = full.df_7$no_all_chronic_diseases, 
-                     est.type = "quantile", alpha = 0.5, no.trees = 100L, 
-                     no.threads = 4L)
-model_chronic.75_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
-                     y = full.df_7$no_all_chronic_diseases, 
-                     est.type = "quantile", alpha = 0.75, no.trees = 100L, 
-                     no.threads = 4L)
-model_chronic.95_SDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "SDI", q = 1),
-                     y = full.df_7$no_all_chronic_diseases, 
-                     est.type = "quantile", alpha = 0.95, no.trees = 100L, 
-                     no.threads = 4L)
-
-# training of individual models: TDI
-model_age.05_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
-                     y = full.df_7$age, est.type = "quantile", alpha = 0.05,
-                     no.trees = 100L, no.threads = 4L)
-model_age.25_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
-                     y = full.df_7$age, est.type = "quantile", alpha = 0.25,
-                     no.trees = 100L, no.threads = 4L)
-model_age.50_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
-                     y = full.df_7$age, est.type = "quantile", alpha = 0.5,
-                     no.trees = 100L, no.threads = 4L)
-model_age.75_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
-                     y = full.df_7$age, est.type = "quantile", alpha = 0.75,
-                     no.trees = 100L, no.threads = 4L)
-model_age.95_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
-                     y = full.df_7$age, est.type = "quantile", alpha = 0.95,
-                     no.trees = 100L, no.threads = 4L)
-
-model_gender_TDI<- ga2model(hyperpars_gender, inputdf = df_qx(di = "TDI", q = 1),
-                     y = full.df_7$female, est.type = "binary",
-                     no.trees = 100L, no.threads = 4L)
-
-model_phi_TDI<- ga2model(hyperpars_gender, inputdf = df_qx(di = "TDI", q = 1),
-                     y = full.df_7$PKV, est.type = "binary",
-                     no.trees = 100L, no.threads = 4L)
-
-model_chronic.05_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
-                     y = full.df_7$no_all_chronic_diseases, 
-                     est.type = "quantile", alpha = 0.05, no.trees = 100L, 
-                     no.threads = 4L)
-model_chronic.25_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
-                     y = full.df_7$no_all_chronic_diseases, 
-                     est.type = "quantile", alpha = 0.25, no.trees = 100L, 
-                     no.threads = 4L)
-model_chronic.50_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
-                     y = full.df_7$no_all_chronic_diseases, 
-                     est.type = "quantile", alpha = 0.5, no.trees = 100L, 
-                     no.threads = 4L)
-model_chronic.75_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
-                     y = full.df_7$no_all_chronic_diseases, 
-                     est.type = "quantile", alpha = 0.75, no.trees = 100L, 
-                     no.threads = 4L)
-model_chronic.95_TDI<- ga2model(hyperpars_age, inputdf = df_qx(di = "TDI", q = 1),
-                     y = full.df_7$no_all_chronic_diseases, 
-                     est.type = "quantile", alpha = 0.95, no.trees = 100L, 
-                     no.threads = 4L)
-
-# training of individual models: HW
-model_age.05_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
-                     y = full.df_7$age, est.type = "quantile", alpha = 0.05,
-                     no.trees = 100L, no.threads = 4L)
-model_age.25_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
-                     y = full.df_7$age, est.type = "quantile", alpha = 0.25,
-                     no.trees = 100L, no.threads = 4L)
-model_age.50_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
-                     y = full.df_7$age, est.type = "quantile", alpha = 0.5,
-                     no.trees = 100L, no.threads = 4L)
-model_age.75_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
-                     y = full.df_7$age, est.type = "quantile", alpha = 0.75,
-                     no.trees = 100L, no.threads = 4L)
-model_age.95_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
-                     y = full.df_7$age, est.type = "quantile", alpha = 0.95,
-                     no.trees = 100L, no.threads = 4L)
-
-model_gender_HW<- ga2model(hyperpars_gender, inputdf = df_qx(di = "HW", q = 1),
-                     y = full.df_7$female, est.type = "binary",
-                     no.trees = 100L, no.threads = 4L)
-
-model_phi_HW<- ga2model(hyperpars_gender, inputdf = df_qx(di = "HW", q = 1),
-                     y = full.df_7$PKV, est.type = "binary",
-                     no.trees = 100L, no.threads = 4L)
-
-model_chronic.05_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
-                     y = full.df_7$no_all_chronic_diseases, 
-                     est.type = "quantile", alpha = 0.05, no.trees = 100L, 
-                     no.threads = 4L)
-model_chronic.25_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
-                     y = full.df_7$no_all_chronic_diseases, 
-                     est.type = "quantile", alpha = 0.25, no.trees = 100L, 
-                     no.threads = 4L)
-model_chronic.50_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
-                     y = full.df_7$no_all_chronic_diseases, 
-                     est.type = "quantile", alpha = 0.5, no.trees = 100L, 
-                     no.threads = 4L)
-model_chronic.75_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
-                     y = full.df_7$no_all_chronic_diseases, 
-                     est.type = "quantile", alpha = 0.75, no.trees = 100L, 
-                     no.threads = 4L)
-model_chronic.95_HW<- ga2model(hyperpars_age, inputdf = df_qx(di = "HW", q = 1),
-                     y = full.df_7$no_all_chronic_diseases, 
-                     est.type = "quantile", alpha = 0.95, no.trees = 100L, 
-                     no.threads = 4L)
-
-name_outcome<- c("age", "gender", "phi", "chronic")
-di.type<- c("TDI", "HW", "SDI")
-outcome.df<- data.frame(age = full.df_7$age, gender = full.df_7$female,
-                        phi = full.df_7$PKV, 
-                        chronic = full.df_7$no_all_chronic_diseases)
-
-```
-```{r}
-# performance eval
+# performance eval plots. Estimates vs. real values
 # eval of output
-
+# make fake dgp great (again)
 ```
 Research question 2:
 ```{r}
@@ -506,7 +399,7 @@ hyperpars_q2<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8,
                                  est_type = "multiclass", cv = 2L, 
                                  no_trees = 100L, no_threads = 4L, 
                                  early_stopping = 10L)
-if(make.saves) save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
+if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 model_q2_TDI<- ga2model(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2),
                      y = full.df_7$diag_class - 1, est.type = "multiclass",
@@ -530,18 +423,70 @@ perf.q2_SDI<- ga2performance.eval(hyperpars_q2, inputdf = df_qx(di = "SDI", q = 
                     cv = 10)
 
 # eval of output
-eval.var.names<- c( colnames(df_qx(di = "TDI", q = 2)))
-eval.sequence.list<- list(
-  TDI = seq(floor(min(full.df_7$thoms_discomfort_index)),
-            ceiling(full.df_7$thoms_discomfort_index)),
-                          )
-eval.list.q2.TDI.age<- booster.eval(model_q2_TDI, 
-                                inputdf = df_qx(di = "TDI", q = 2), 
-                                no.draws = 100, seed = 45846,
-                                eval.var = )
-im<- booster.eval(booster = model_q2_HW, DI = "SDI", 
-                  sdi = unlist(hyperpars_chronic$best_in_class[1, 12:21]), 
-                  Q = 2, no.draws = 100, eval.var = "no_all_chronic_diseases", 
-                  eval.seq = 20:29, seed = 681615, eval.type = "response")
+x.list<- list(PraxisID = as.numeric(levels(as.factor(full.df_7$PraxisID))), 
+              dow = seq(1,7), public_holiday = c(0, 1), 
+              school_holiday = c(0, 1), week_of_month = seq(1, 5), 
+              month = seq(1, 12), 
+              year = seq(TG_DateNum2year(date.range[1]), 
+                         TG_DateNum2year(date.range[2])),
+              daylight_hours = seq(0.35, 0.65, by = 0.1), 
+              covid_7_day_incidence = seq(0, 2500, length.out = 100), 
+              age = seq(18, 70), female = c(0, 1), PKV = c(0, 1), 
+              smoking = c(0, 1), alcohol = c(0, 1), sport = c(0, 1), 
+              chronic_1 = seq(0, 10), chronic_2 = seq(0, 10), 
+              chronic_3 = seq(0, 10), chronic_4 = seq(0, 10), 
+              chronic_5 = seq(0, 10), chronic_6 = seq(0, 10), 
+              chronic_7 = seq(0, 10), chronic_8 = seq(0, 10), 
+              chronic_9 = seq(0, 10), chronic_10 = seq(0, 10), 
+              chronic_11 = seq(0, 10), no_all_chronic_diseases = seq(0, 20)
+              )
+x.list.factors<- list(PraxisID = NA, 
+                      dow = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"), 
+                      public_holiday = c("No", "Yes"), 
+                      school_holiday = c("No", "Yes"), week_of_month = NA, 
+                      month = NA, year = NA, daylight_hours = NA, 
+                      covid_7_day_incidence = NA, age = NA, 
+                      female = c("male", "female"), 
+                      PKV = c("statutory", "private"), smoking = c("No", "Yes"), 
+                      alcohol = c("No", "Yes"), sport = c("No", "Yes"), 
+                      chronic_1 = NA, chronic_2 = NA, chronic_3 = NA, 
+                      chronic_4 = NA, chronic_5 = NA, chronic_6 = NA, 
+                      chronic_7 = NA, chronic_8 = NA, chronic_9 = NA, 
+                      chronic_10 = NA, chronic_11 = NA, 
+                      no_all_chronic_diseases = NA
+              )
+sel.seed<- 7518269
+model.eval(booster = model_q2_TDI, DI = "TDI", Q = 2, no.draws = 100, 
+           eval.var = "thoms_discomfort_index", 
+           eval.seq = seq(min(full.df_7$thoms_discomfort_index), 
+                          max(full.df_7$thoms_discomfort_index), 
+                          length.out = 500), 
+           seed = sel.seed, y.max = 1)
+
+model.eval(booster = model_q2_HW, DI = "HW", Q = 2, no.draws = 100, 
+           eval.var = "length_heatwave", 
+           eval.seq = seq(min(full.df_7$length_heatwave), 
+                          max(full.df_7$length_heatwave)), 
+           seed = sel.seed, y.max = 1)
+
+sdi_q2<- as.vector(as.matrix(hyperpars_q2$best_in_class[,12:21]))
+full.df_7$sdi_q2<- SDI(df = full.df_7, 
+                       w = dbetabinom.ab(x = seq(0, sdi_q2[1]), 
+                                         size = sdi_q2[1], shape1 = sdi_q2[2], 
+                                         shape2 = sdi_q2[3]),
+                       theta = sdi_q2[4:6], rho = sdi_q2[7:9], tau = sdi_q2[10])
+sdi_q2_range<- range(full.df_7$sdi_q2)
+model.eval(booster = model_q2_SDI, DI = "SDI", sdi = sdi_q2, Q = 2, 
+           no.draws = 100, eval.var = "sdi", 
+           eval.seq = seq(sdi_q2_range[1], sdi_q2_range[2], length.out = 500), 
+           seed = sel.seed, y.max = 1)
+
+for(x.ind in seq_along(x.list)){
+    model.eval(booster = model_q2_SDI, DI = "SDI", sdi = sdi_q2, Q = 2, 
+               no.draws = 100, eval.var = names(x.list)[x.ind], 
+               eval.seq = x.list[[x.ind]], seed = sel.seed, y.max = 1, 
+               x.factor.names = x.list.factors[[x.ind]])
+}
+
 ```
 

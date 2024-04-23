@@ -1255,3 +1255,20 @@ hyper.pars_hw_q1_gender<- optim(par = c(0,log(9),log(10)), fn = tuning.hw_q1_gen
 hyper.pars_hw_q1_phi<- optim(par = c(0,log(9),log(10)), fn = tuning.hw_q1_phi, method = "SANN", control = list(maxit=tuning.its))
 hyper.pars_hw_q1_chronic<- optim(par = c(0,log(9),log(10)), fn = tuning.hw_q1_chronic, method = "SANN", control = list(maxit=tuning.its))
 
+SuggestedDiscomfortIndex_global<- function(loc,w,theta,rho,tau){
+  #uses loc to find a transformed weather data frame and calculates vis-à-vis a vector of the suggested discomfort index
+  df<- get(paste0("transformed_weather_",loc), envir = .GlobalEnv)
+  T<- df$daily_mean_temperature_kelvin
+  RH<- df$daily_mean_relative_humidity
+  out<- w[1]*(theta[1]*T + theta[2]*T^2 + theta[3]*T^3 + rho[1]*RH + rho[2]*RH + rho[3]*RH + tau* T*RH)
+  if(length(w)>1){
+    for(i in seq(2,length(w))){
+      #T<- get(paste0("df$temperature_kelvin_l",i))
+      T<- df[paste0("temperature_kelvin_l",i)]
+      #RH<- get(paste0("df$relative_humidity_l",i))
+      RH<- df[paste0("relative_humidity_l",i)]
+      out<- out+ w[i]*(theta[1]*T + theta[2]*T^2 + theta[3]*T^3 + rho[1]*RH + rho[2]*RH + rho[3]*RH + tau* T*RH)
+    }
+  }
+  return(out)
+}

@@ -130,9 +130,17 @@ save_plots <- function(eval_list) {
 }
 save_plots(x)
 
-model.eval<- function(booster, DI, sdi = FALSE, Q, no.draws, eval.var, eval.seq, 
-                      seed, eval.type = "response", eval_list, y.max, 
-                      plot.title, y.names = NA, y.label = "density"){
+model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, 
+                      seed, y.max, plot.title, x.factor.names = NA, 
+                      y.label = "density"){
+  # simulates data from a booster and a df_qx-created data frame. Returns for each class outcome of the 'dependent' variable a plot with evaluation results.
+  # booster is a booster, extracted from ga2model
+  # DI is the discomfort index, given as "TDI", "HW", or "SDI"
+  # sdi is the vector of SDI hyperparameters iff DI == "SDI"
+  # Q is the numeric research question (either 1 or 2). It is fed into df_qx.
+  # eval.var is the name of the variable that will be varied. In the returned plots, it will be on the x-axis.
+  # eval.seq is the sequence of variables that will be inserted for the evaluated variable.
+  # seed is the random seed.
   library(lightgbm)
   set.seed(seed)
   
@@ -140,7 +148,7 @@ model.eval<- function(booster, DI, sdi = FALSE, Q, no.draws, eval.var, eval.seq,
   blacklist<- c("thoms_discomfort_index", "length_heatwave", "sdi", 
                 "daylight_hours", "covid_7_day_incidence", "age", 
                 colnames(inputdf)[grep("chronic", colnames(inputdf))])
-  if(length(sdi)>1){
+  if(DI == "SDI"){
     sdi.weights<- dbetabinom.ab(x = seq(0,sdi[1]), size = sdi[1],
                                 shape1 = sdi[2], shape2 = sdi[3])
     sdi.vec<- SDI(df = inputdf, w = sdi.weights, theta = sdi[4:6],
@@ -151,11 +159,9 @@ model.eval<- function(booster, DI, sdi = FALSE, Q, no.draws, eval.var, eval.seq,
     df$sdi<- sdi.vec
     factor.vars<- colnames(df)[!colnames(df) %in% blacklist]
     df<- data.matrix(df)
-  }else if(isFALSE(sdi)){
+  }else{
     factor.vars<- colnames(inputdf)[!colnames(inputdf) %in% blacklist]
     df<- data.matrix(inputdf)
-  }else{
-    stop(paste("model.eval: sdi has to be either FALSE or a vector of sdi hyperparameters."))
   }
   
   initial.data<- df[sample(seq(1, nrow(inputdf)), no.draws, replace = FALSE),]
@@ -171,7 +177,7 @@ model.eval<- function(booster, DI, sdi = FALSE, Q, no.draws, eval.var, eval.seq,
   
   prediction.output<- matrix(predict(object = booster, 
                                      newdata = data.matrix(eval.data), 
-                                     type = eval.type),
+                                     type = "response"),
                              nrow = nrow(eval.data))
   k<- ncol(prediction.output)
   possible.var.names<- c("thoms_discomfort_index", "PraxisID", "dow",
@@ -181,59 +187,56 @@ model.eval<- function(booster, DI, sdi = FALSE, Q, no.draws, eval.var, eval.seq,
                          "smoking", "alcohol", "sport", "chronic_1", 
                          "chronic_2", "chronic_3", "chronic_4", "chronic_5", 
                          "chronic_6", "chronic_7", "chronic_8", "chronic_9", 
-                         "chronic_10", "chronic_11", "no_all_chronic_diseases")
+                         "chronic_10", "chronic_11", "no_all_chronic_diseases",
+                         "length_heatwave", "sdi")
   possible.xlab.names<- c("Thom's Discomfort Index", "practice", 
                           "day of the week", "public holiday", "school holiday",
                           "week of the month", "month", "year", 
                           "daylight hours", "Covid-19 7-day-incidence", "age",
-                          "female", )
-  ##add special plot type for factor variables
+                          "gender", "health insurance", "smoking", "alcohol", 
+                          "sport", "chronic cold-related injuries", 
+                          "chronic injuries due to excessive heat", 
+                          "chronic major cardivascular diseases", 
+                          "chronic major external causes for injury", 
+                          "chronic mental and behavioural disorders", 
+                          "chronic diseases of the respiratory system", 
+                          "chronic endocrine, nutritional, and metabolic disorders", 
+                          "chronic diseases of the digestive system", 
+                          "chronic genitourinary disorders", 
+                          "chronic musculoskeletal disorders", 
+                          "chronic other diseases and injuries", 
+                          "all chronic diseases", "length heatwave", 
+                          "suggested discomfort index")
+  x.name<- possible.xlab.names[eval.var == possible.var.names]
   for(l in seq(1, k)){
-    if(any(is.na(y.names))){
+    if(Q == 2){
+      y.names<- c("cold-related injuries", 
+                  "injuries due to excessive heat", 
+                  "major cardivascular diseases", 
+                  "major external causes for injury", 
+                  "mental and behavioural disorders", 
+                  "diseases of the respiratory system", 
+                  "endocrine, nutritional, and metabolic disorders", 
+                  "diseases of the digestive system", 
+                  "genitourinary disorders", 
+                  "musculoskeletal disorders", 
+                  "other diseases and injuries")
+      plot.name<- paste(plot.title, y.names[l], sep = ": ")
+      file.name<- paste0(plot.title, "_", y.names[l], ".png")
+    }else{
       plot.name<- plot.title
       file.name<- paste0(plot.title, ".png")
-    }else{
-      plot.name<- paste(plot.title, y.names[i], sep = ": ")
-      file.name<- paste0(plot.title, "_", y.names[i], ".png")
     }
     png(file.name)
     sel<- seq(1, nrow(eval.data), by = no.draws)
-    plot(prediction.output[sel,]~eval.data[sel,], type = "l", xlab = )
+    plot(prediction.output[sel, l]~eval.data[sel, eval.var.col], type = "l", 
+         xlab = x.name, ylab = y.label, main = plot.name, ylim = c(0, y.max))
+    if(length(x.factor.names)>=2){
+      text(x = eval.seq, y = -0.1, labels = x.factor.names, adj = 0.5)
+    }
     for(i in seq(2, no.draws)){
-      
-    }
-  }
-  
-  out<- list()
-  for(i in seq(1,no.draws)){
-    selection<- seq(1, nrow(eval.data), by = no.draws)
-    im<- cbind(eval.data[selection, eval.var.col], prediction.output[selection,])
-    colnames(im)<- c(eval.var, paste(rep("pred_class", ncol(prediction.output)), 
-                                     seq(1, ncol(prediction.output)), 
-                                     sep = "_"))
-    out[[i]]<- im
-  }
-  return(out)
-  k <- length(eval_list)
-  x.seq<- eval_list[[1]][,1]
-  for (i in 1:(ncol(eval_list[[1]]) - 1)) {
-    x<- eval_list[[1]][,1]
-    y<- eval_list[[1]][,i + 1]
-    if(any(is.na(y.names))){
-      plot.name<- plot.title
-    }else{
-      plot.name<- paste(plot.title, y.names[i], sep = ": ")
-    }
-    if(any(is.na(y.names))){
-      file.name<- paste0(plot.title, ".png")
-    }else{
-      file.name<- paste0(plot.title, "_", y.names[i], ".png")
-    }
-    png(file.name)
-    plot(y~x, type = 'l', xlab = colnames(eval_list[[1]])[1], ylab = y.label, 
-         main = plot.name, xlim = range(x.seq), ylim = c(0,y.max))
-    for (j in 2:k) {
-      lines(x = x, y = eval_list[[j]][,i + 1])
+      sel<- sel + 1
+      lines(x = eval.data[sel, eval.var.col], y = prediction.output[sel, l])
     }
     dev.off()
   }
