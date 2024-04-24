@@ -77,7 +77,7 @@ TG_DateNum2week<- function(tgdatenumvec){
 
 TG_DateNum2week.of.month<- function(tgdatenumvec){
   #takes a vector of TG_DateNum dates and returns them as their respective week within the year according to ISO 8601 as factor variable
-  as.factor(day(TG_DateNum2date(tgdatenumvec)))
+  as.factor((day(TG_DateNum2date(tgdatenumvec)) - 1) %/% 7 +1)
 }
 
 TG_DateNum2month<- function(tgdatenumvec){
