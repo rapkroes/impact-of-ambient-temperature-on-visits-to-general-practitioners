@@ -272,7 +272,7 @@ Research Question 1:
 #Hyperparameter tuning
 hyperpars_age<- genetic.algorithm(optim.seed = 4567, n = 50, 
                                     pcrossover = 0.8, pmutation = 0.1, 
-                                    maxiter = 3, elitism = 4,
+                                    maxiter = 3, elitism = 4, digits = c(2,3,3),
                                     sdi = TRUE, lr = c(0,1), 
                                     no.leaves = c(2,40), max.depth = c(1,10),
                                     min.data.in.leaf = c(2,1e7), 
@@ -298,9 +298,10 @@ hyperpars_gender<- genetic.algorithm(optim.seed = 4567, n = 50,
                                     other.rate = c(0,0.5), cat.smooth = c(0,99),
                                     path.smooth = c(0,99),
                                     inputdf = df_qx(di = "SDI", q = 1),
-                                    y = full.df_7$female, est_type = "binary",
-                                    alpha = 0.5, cv = 2L, no_trees = 100L,
-                                    no_threads = 4L, early_stopping = 10L)
+                                    y = full.df_7$female, 
+                                    est_type = "cross_entropy", alpha = 0.5, 
+                                    cv = 2L, no_trees = 100L, no_threads = 4L, 
+                                    early_stopping = 10L)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 hyperpars_phi<- genetic.algorithm(optim.seed = 4567, n = 50, 
@@ -314,7 +315,7 @@ hyperpars_phi<- genetic.algorithm(optim.seed = 4567, n = 50,
                                     other.rate = c(0,0.5), cat.smooth = c(0,99),
                                     path.smooth = c(0,99),
                                     inputdf = df_qx(di = "SDI", q = 1),
-                                    y = full.df_7$PKV, est_type = "binary",
+                                    y = full.df_7$PKV, est_type = "cross_entropy",
                                     alpha = 0.5, cv = 2L, no_trees = 100L,
                                     no_threads = 4L, early_stopping = 10)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
@@ -336,11 +337,25 @@ hyperpars_chronic<- genetic.algorithm(optim.seed = 4567, n = 50,
                                     early_stopping = 10L)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
-model.list_1<- list(age = "quantile", gender = "binary", phi = "binary",
-                    chronic = "quantile")
+model.list_1<- list(age = "quantile", gender = "cross_entropy", 
+                    phi = "cross_entropy", chronic = "quantile")
 model.list_2<- list(age = full.df_7$age, gender = full.df_7$female, 
                     phi = full.df_7$PKV, 
                     chronic = full.df_7$no_all_chronic_diseases)
+x.list<- list(PraxisID = as.numeric(levels(as.factor(full.df_7$PraxisID))), 
+              dow = seq(1,7), public_holiday = c(0, 1), 
+              school_holiday = c(0, 1), week_of_month = seq(1, 5), 
+              month = seq(1, 12), 
+              year = seq(TG_DateNum2year(date.range[1]), 
+                         TG_DateNum2year(date.range[2])),
+              daylight_hours = seq(0.35, 0.65, by = 0.1), 
+              covid_7_day_incidence = seq(0, 2500, length.out = 100))
+x.list.factors<- list(PraxisID = NA, 
+                      dow = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"), 
+                      public_holiday = c("No", "Yes"), 
+                      school_holiday = c("No", "Yes"), week_of_month = NA, 
+                      month = NA, year = NA, daylight_hours = NA, 
+                      covid_7_day_incidence = NA)
 for(di in c("TDI", "HW", "SDI")){
   for(model.ind in seq_along(model.list_1)){
     if(model.list_1[[model.ind]] == "quantile"){
@@ -359,28 +374,49 @@ for(di in c("TDI", "HW", "SDI")){
                                               inputdf = df_qx(di = di, q = 1),
                                               y = model.list_2[[model.ind]],
                                               est.type = "quantile"))
+        if(di == "SDI"){
+          processed.hyp<- as.vector(as.matrix(hyp$best_in_class[,12:21]))
+          if(model.ind == 1){
+            y.range<- 80
+          }else{
+            y.range<- 15
+          }
+          for(x.ind in seq_along(x.list)){
+            model.eval(booster = get(model.name), DI = di, sdi = processed.hyp,
+                       Q = 1, no.draws = 100, eval.var = names(x.list)[x.ind],
+                       eval.seq = x.list[[x.ind]], seed = sel.seed, 
+                       y.max = y.range, y.name = names(model.list_1)[model.ind],
+                       x.factor.names = x.list.factors[[x.ind]])
+          }
+        }
       }
     }else{
       model.name<- paste0("model_", names(model.list_1)[model.ind], "_", di)
       hyp<- get(paste0("hyperpars_", names(model.list_1)[model.ind]))
       assign(model.name, ga2model(hyp, inputdf = df_qx(di = di, q = 1),
                                   y = model.list_2[[model.ind]],
-                                  est.type = "binary", 
-                                  alpha = as.numeric(quant),
-                                  no.trees = 100L, no.threads = 4L))
+                                  est.type = "cross_entropy", 
+                                  alpha = as.numeric(quant), no.trees = 100L, 
+                                  no.threads = 4L))
       perf.name<- paste0("perf.", names(model.list_1)[model.ind], "_", di)
       assign(perf.name, ga2performance.eval(hyp, 
                                             inputdf = df_qx(di = di, q = 1),
                                             y = model.list_2[[model.ind]],
-                                            est.type = "binary"))
+                                            est.type = "cross_entropy"))
+      if(di == "SDI"){
+          processed.hyp<- as.vector(as.matrix(hyp$best_in_class[,12:21]))
+          for(x.ind in seq_along(x.list)){
+            model.eval(booster = get(model.name), DI = di, sdi = processed.hyp,
+                       Q = 1, no.draws = 100, eval.var = names(x.list)[x.ind],
+                       eval.seq = x.list[[x.ind]], seed = sel.seed, 
+                       y.max = 1, y.name = names(model.list_1)[model.ind],
+                       x.factor.names = x.list.factors[[x.ind]])
+          }
+        }
     }
   }
 }
 
-
-# performance eval plots. Estimates vs. real values
-# eval of output
-# make fake dgp great (again)
 ```
 Research question 2:
 ```{r}
