@@ -5,6 +5,8 @@ library(ggplot2)
 # Weather Plots
 # Daylight Plots
 # Age distribution
+# (unbalanced?) distribution of disease category
+# SDI param plots: daily effect (3d) & accumulated effects
 
 #prepare data
 

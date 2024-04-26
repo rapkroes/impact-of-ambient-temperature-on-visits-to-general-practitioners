@@ -655,7 +655,7 @@ wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth,
   # alpha is in this context the quantile to be estimated during quantile regression.
   # cv is the number of folds for cross-validation (2<= integer >= number of observations - 1)
   # seed is a seed that may be deployed to the wrapper, but it is not needed. Due to the parallelisation, exact replication is not possible.
-  
+  browser()
   if(est.type=="quantile"){
     lossfct<- "quantile"
   }else if(est.type=="binary"){
@@ -968,7 +968,13 @@ ga2performance.eval<- function(ga.list, inputdf, y, est.type, no.trees = 100L,
 }
 
 performance.plots<- function(predicted.var, di, practiceID, y.name, y.range, no.threads = 4){
-  # Creates plots to evaluate the peformance of the estimated models. 
+  # Creates plots to evaluate the peformance of the estimated models. Works only for research question 1.
+  # predicted.var is a string giving the name of the output variable. Can bei either age, gender, phi, or chronic.
+  # di is the discomfort index, given as "TDI", "HW", or "SDI"
+  # practiceID is the practiceID for which the data will be filtered.
+  # y.name is the name of the y axis, a character string
+  # y.range is a double precision, two element vector giving the range of the y axis
+  # no.threads is the number of threads used for calculating the daily outcomes.
   poss.vars<- c("age", "gender", "phi", "chronic")
   mapping<- c("age", "female", "PKV", "no_all_chronic_diseases")
   
@@ -1125,7 +1131,6 @@ model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed,
   # y.name is the name of the 'dependent' variable for research question 1. It is used in the naming of the plot and the file that the plot is saved to.
   # x.factor.names is an optional vector of names attached to the numeric values of x. This is especially important for factor variables.
   # y.label is the optional name attached to the y axis of the plot.
-  
   inputdf<- df_qx(di = DI, q = Q)
   blacklist<- c("thoms_discomfort_index", "length_heatwave", "sdi", 
                 "daylight_hours", "covid_7_day_incidence", "age", 
