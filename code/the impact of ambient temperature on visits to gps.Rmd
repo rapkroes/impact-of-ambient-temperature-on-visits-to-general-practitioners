@@ -17,7 +17,6 @@ library(lightgbm)
 library(VGAM)
 library(Matrix)
 library(tictoc)
-library(ggplot2)
 ```
 ```{r}
 
@@ -370,10 +369,10 @@ for(di in c("TDI", "HW", "SDI")){
                                     no.trees = 100L, no.threads = 4L))
         perf.name<- paste0("perf.", names(model.list_1)[model.ind], quant, "_", 
                            di)
-        # assign(perf.name, ga2performance.eval(hyp, 
-        #                                       inputdf = df_qx(di = di, q = 1),
-        #                                       y = model.list_2[[model.ind]],
-        #                                       est.type = "quantile"))
+        assign(perf.name, ga2performance.eval(hyp, alpha = as.numeric(quant),
+                                              inputdf = df_qx(di = di, q = 1),
+                                              y = model.list_2[[model.ind]],
+                                              est.type = "quantile"))
         if(di == "SDI"){
           processed.hyp<- as.vector(as.matrix(hyp$best_in_class[,12:21]))
           if(model.ind == 1){
@@ -386,7 +385,8 @@ for(di in c("TDI", "HW", "SDI")){
                        Q = 1, no.draws = 100, eval.var = names(x.list)[x.ind],
                        eval.seq = x.list[[x.ind]], seed = 8181818, 
                        y.max = y.range, y.name = names(model.list_1)[model.ind],
-                       x.factor.names = x.list.factors[[x.ind]])
+                       x.factor.names = x.list.factors[[x.ind]],
+                       y.label = names(model.list_1)[model.ind])
           }
         }
       }
@@ -399,10 +399,10 @@ for(di in c("TDI", "HW", "SDI")){
                                   alpha = as.numeric(quant), no.trees = 100L, 
                                   no.threads = 4L))
       perf.name<- paste0("perf.", names(model.list_1)[model.ind], "_", di)
-      # assign(perf.name, ga2performance.eval(hyp, 
-      #                                       inputdf = df_qx(di = di, q = 1),
-      #                                       y = model.list_2[[model.ind]],
-      #                                       est.type = "cross_entropy"))
+      assign(perf.name, ga2performance.eval(hyp,
+                                            inputdf = df_qx(di = di, q = 1),
+                                            y = model.list_2[[model.ind]],
+                                            est.type = "cross_entropy"))
       if(di == "SDI"){
           processed.hyp<- as.vector(as.matrix(hyp$best_in_class[,12:21]))
           for(x.ind in seq_along(x.list)){
@@ -416,11 +416,17 @@ for(di in c("TDI", "HW", "SDI")){
     }
   }
 }
+performance.plots("age", di = "SDI", practiceID = 6, galist = hyperpars_age,
+                  y.name = "age", y.range = c(0, 80))
+performance.plots("gender", di = "SDI", practiceID = 6, 
+                  galist = hyperpars_gender, y.name = "proportion female", 
+                  y.range = c(0, 1))
+performance.plots("phi", di = "SDI", practiceID = 6, galist = hyperpars_phi,
+                  y.name = "proportion privately insured", y.range = c(0, 1))
+performance.plots("chronic", di = "SDI", practiceID = 6, hyperpars_chronic,
+                  y.name = "number of chronic diseases", y.range = c(0, 20))
 
-#ga2performance.eval does not work anymore
 #effect on age is not shown (model.eval)
-#y axis label for not-proportions (model.eval)
-#add performance.plots
 ```
 Research question 2:
 ```{r}

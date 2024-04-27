@@ -655,7 +655,6 @@ wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth,
   # alpha is in this context the quantile to be estimated during quantile regression.
   # cv is the number of folds for cross-validation (2<= integer >= number of observations - 1)
   # seed is a seed that may be deployed to the wrapper, but it is not needed. Due to the parallelisation, exact replication is not possible.
-  browser()
   if(est.type=="quantile"){
     lossfct<- "quantile"
   }else if(est.type=="binary"){
@@ -931,8 +930,9 @@ ga2model<- function(ga.list, inputdf, y, est.type, alpha = 0.5,
   return(out)
 }
 
-ga2performance.eval<- function(ga.list, inputdf, y, est.type, no.trees = 100L, 
-                               no.threads = 4L, seed = NA, cv = 10){
+ga2performance.eval<- function(ga.list, inputdf, y, est.type, no.trees = 100L,
+                               alpha = 0.5, no.threads = 4L, seed = NA, 
+                               cv = 10){
   # Measures the performance of the best model specified by the "genetic.algorithm" function.
   # ga.list is an output list extracted from the function "genetic.algorithm".
   # other parameters are equal to wrapper_interior parameters.
@@ -967,7 +967,8 @@ ga2performance.eval<- function(ga.list, inputdf, y, est.type, no.trees = 100L,
   return(out)
 }
 
-performance.plots<- function(predicted.var, di, practiceID, y.name, y.range, no.threads = 4){
+performance.plots<- function(predicted.var, di, practiceID, galist, y.name, 
+                             y.range, no.threads = 4){
   # Creates plots to evaluate the peformance of the estimated models. Works only for research question 1.
   # predicted.var is a string giving the name of the output variable. Can bei either age, gender, phi, or chronic.
   # di is the discomfort index, given as "TDI", "HW", or "SDI"
@@ -985,8 +986,15 @@ performance.plots<- function(predicted.var, di, practiceID, y.name, y.range, no.
       arrange(TG_DateNum)
     
     #predictive df
-    pred.df<- data.matrix(df_qx(ref.df, di = di, q = 1))
+    pred.df<- df_qx(ref.df, di = di, q = 1)
     pred.df<- pred.df[!duplicated(ref.df$TG_DateNum),]
+    if(di == "SDI"){
+      pred.df$sdi<- ga2sdi(galist, pred.df)
+      col.deselector<- grepl("temperature", colnames(pred.df)) | 
+        grepl("humidity", colnames(pred.df))
+      pred.df<- pred.df[,!col.deselector]
+    }
+    pred.df<- data.matrix(pred.df)
     pred.matrix<- matrix(NA, ncol = 5, nrow = nrow(pred.df))
     for(i in seq(1, 5)){
       booster<- get(paste0("model_", predicted.var, quants[i], "_", di), 
@@ -1016,8 +1024,8 @@ performance.plots<- function(predicted.var, di, practiceID, y.name, y.range, no.
       arrange(TG_DateNum)
     
     prefix<- paste0("Practice ", practiceID, ", ", predicted.var, " quantiles")
-    quants_2<- c("5%", "20%", "50%", "75%", "95%")
-    quants_3<- c("5pct", "20pct", "50pct", "75pct", "95pct")
+    quants_2<- c("5%", "25%", "50%", "75%", "95%")
+    quants_3<- c("5pct", "25pct", "50pct", "75pct", "95pct")
     plot.names<- paste0(prefix, " (", quants_2, ")")
     file.names<- paste0(prefix, " ", quants_3, "_", di, ".png")
   }else if(predicted.var %in% c("gender", "phi")){
@@ -1026,8 +1034,15 @@ performance.plots<- function(predicted.var, di, practiceID, y.name, y.range, no.
       arrange(TG_DateNum)
     
     #predictive df
-    pred.df<- data.matrix(df_qx(ref.df, di = di, q = 1))
+    pred.df<- df_qx(ref.df, di = di, q = 1)
     pred.df<- pred.df[!duplicated(ref.df$TG_DateNum),]
+    if(di == "SDI"){
+      pred.df$sdi<- ga2sdi(galist, pred.df)
+      col.deselector<- grepl("temperature", colnames(pred.df)) | 
+        grepl("humidity", colnames(pred.df))
+      pred.df<- pred.df[,!col.deselector]
+    }
+    pred.df<- data.matrix(pred.df)
     booster<- get(paste0("model_", predicted.var, "_", di), envir = .GlobalEnv)
     pred.matrix<- matrix(predict(object = booster, newdata = pred.df), ncol = 1)
     
@@ -1114,6 +1129,16 @@ performance.plots<- function(predicted.var, di, practiceID, y.name, y.range, no.
     lines(x = ref.matrix[,1], y = pred.matrix[,i], col = "red", lty = 3)
     dev.off()
   }
+}
+
+ga2sdi<- function(galist, inputdf){
+  #Returns the SDI vector for any data frame which has needed columns to calculate SDI. The parameterisation is directly imported from a list generated through the "genetic.algorithm" function.
+  sdi<- unlist(galist$best_in_class[12:21])
+  sdi.weights<- dbetabinom.ab(x = seq(0,sdi[1]), size = sdi[1], shape1 = sdi[2], 
+                              shape2 = sdi[3])
+  out<- SDI(df = as.data.frame(inputdf), w = sdi.weights, theta = sdi[4:6], rho = sdi[7:9], 
+            tau = sdi[10])
+  return(out)
 }
 
 model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed, 
