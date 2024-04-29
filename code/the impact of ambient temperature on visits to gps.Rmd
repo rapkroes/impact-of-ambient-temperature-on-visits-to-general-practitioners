@@ -37,18 +37,12 @@ if(fake.data){
   old.wd<- getwd()
   setwd("N:/StudentischeHilfskraefte/_Kroes (Christoph)/Routinedaten/01_Husten/R/DB")
   names.vec<- c("Diag3", "Stamm3", "Konsul3")
-  
   for (i in seq(1,length(names.vec))){
     file.name<- paste0("DB_", names.vec[i], "_v03", ".csv")
-  
     im.file<- read.csv(file = file.name, header = TRUE, sep = ";")
-  
     assign(names.vec[i], im.file)
-  
   }
-  # remove duplicate file and unnecessary name
   rm(file.name, im.file)
-  
   setwd(old.wd)
 }
 
