@@ -36,18 +36,18 @@ if(fake.data){
 }else{
   old.wd<- getwd()
   setwd("N:/StudentischeHilfskraefte/_Kroes (Christoph)/Routinedaten/01_Husten/R/DB")
-  names.vec<- c("Diag3","Stamm3","Konsul3")
+  names.vec<- c("Diag3", "Stamm3", "Konsul3")
   
   for (i in seq(1,length(names.vec))){
-    file.name<- paste0("DB_",names.vec[i],"_v03",".csv")
+    file.name<- paste0("DB_", names.vec[i], "_v03", ".csv")
   
     im.file<- read.csv(file = file.name, header = TRUE, sep = ";")
   
-    assign(names.vec[i],im.file)
+    assign(names.vec[i], im.file)
   
   }
   # remove duplicate file and unnecessary name
-  rm(file.name,im.file)
+  rm(file.name, im.file)
   
   setwd(old.wd)
 }
@@ -61,9 +61,11 @@ location.name<- location_information$location.name
 
 #weather data
 for(i in seq_along(location.name)){
-  url_string<- paste0("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/weather%20data/wetter%20",location.name[i],".csv")
+  url_string<- paste0("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/weather%20data/wetter%20", location.name[i], ".csv")
   im<- read.csv(url_string)
-  colnames(im)<- c("time", "temperature_celsius", "relative_humidity", "dew_point", "apparent_temperature_celsius", "precipitation", "rain", "snow_fall", "snow_depth", "surface_pressure")
+  colnames(im)<- c("time", "temperature_celsius", "relative_humidity", 
+                   "dew_point", "apparent_temperature_celsius", "precipitation", 
+                   "rain", "snow_fall", "snow_depth", "surface_pressure")
 
   #unit transformations
   im$TG_DateNum<- date2TG_DateNum(im$time)
@@ -71,7 +73,8 @@ for(i in seq_along(location.name)){
     filter(TG_DateNum>=date.range[1]-21 & TG_DateNum<=date.range[2])
   im$temperature_kelvin<- im$temperature_celsius +273.16
   
-  weatherdata.transformation(im,sel.quantile = .95, loc = location.name[i], dr = date.range)
+  weatherdata.transformation(im, sel.quantile = .95, loc = location.name[i], 
+                             dr = date.range)
   #assign(paste0("wetter_",location.name[i]),im)
 }
 
@@ -79,14 +82,14 @@ for(i in seq_along(location.name)){
 
 #daylight data
 for(i in seq_along(location.name)){
-  url_string<- paste0("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/daylight%20hours%20data/daylight_",location.name[i],".csv")
+  url_string<- paste0("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/daylight%20hours%20data/daylight_", location.name[i], ".csv")
   im<- read.csv(url_string, header = TRUE)
   
   #unit transformations
   #im$TG_DateNum<- date2TG_DateNum(im$time)
   im<- im|>
-    filter(TG_DateNum>=date.range[1] & TG_DateNum<=date.range[2])
-  assign(paste0("daylight_",location.name[i]),im)
+    filter(TG_DateNum >= date.range[1] & TG_DateNum <= date.range[2])
+  assign(paste0("daylight_", location.name[i]), im)
 }
 
 #Covid-19 data
@@ -128,14 +131,17 @@ full.df_1.1<- add.last.visit(full.df_1, no.splits = 50, no.workers = 4)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ### stamm data
-full.df_1.2<- add.stamm.new.par(full.df_1.1,Stamm3,no.splits = 50, no.workers = 4)
+full.df_1.2<- add.stamm.new.par(full.df_1.1, Stamm3, no.splits = 50, 
+                                no.workers = 4)
 # gender variable
-gender.selector<- full.df_1.2$Weibl==1 | full.df_1.2$Maennl==1 | full.df_1.2$stamm.is.there==0
+gender.selector<- full.df_1.2$Weibl==1 | full.df_1.2$Maennl==1 | 
+  full.df_1.2$stamm.is.there==0
 full.df_1.2$female<- full.df_1.2$Weibl
 full.df_1.3<- full.df_1.2[gender.selector,]|>
-  select(-Weibl,-Maennl,-Transgen,-Divers,-Geschlundef)
+  select(-Weibl, -Maennl, -Transgen, -Divers, -Geschlundef)
 #add PKV (private health insurance) dummy
-full.df_1.3$PKV[full.df_1.3$stamm.is.there==1]<- IK2PKV(full.df_1.3$IK[full.df_1.3$stamm.is.there==1])
+full.df_1.3$PKV[full.df_1.3$stamm.is.there == 1]<- IK2PKV(
+  full.df_1.3$IK[full.df_1.3$stamm.is.there==1])
 #add Landkreis_id
 full.df_1.3$landkreis<- praxisID2location(full.df_1.3$PraxisID)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
@@ -151,10 +157,10 @@ full.df_3<- full.df_2.2
 full.df_3$dow<- as.factor(TG_DateNum2dow(full.df_3$TG_DateNum))
 full.df_3<- cbind(full.df_3,TG_DateNum2holiday(full.df_3$TG_DateNum))
 full.df_3$week<- as.factor(TG_DateNum2week(full.df_3$TG_DateNum))
-full.df_3$week_of_month<- as.factor(TG_DateNum2week.of.month(full.df_3$TG_DateNum))
+full.df_3$week_of_month<- TG_DateNum2week.of.month(full.df_3$TG_DateNum)
 full.df_3$month<- as.factor(TG_DateNum2month(full.df_3$TG_DateNum))
 full.df_3$year<- as.factor(TG_DateNum2year(full.df_3$TG_DateNum))
-full.df_3$age<- TG_DateNum2year(full.df_3$TG_DateNum)-full.df_3$Geburtsjahr
+full.df_3$age<- TG_DateNum2year(full.df_3$TG_DateNum) - full.df_3$Geburtsjahr
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ### covid-19
@@ -163,14 +169,17 @@ full.df_4$Landkreis_id<- praxis_id2landkreis_id(full.df_4$PraxisID)
 full.df_4<- full.df_4|>
   arrange(Landkreis_id,TG_DateNum)
 full.df_4.2<- add.covid(full.df_4,covid.data, no.workers = 4)
-full.df_4.2$covid_positive_incidence<- full.df_4.2$covid_7_day_incidence>0
+full.df_4.2$covid_positive_incidence<- full.df_4.2$covid_7_day_incidence > 0
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ### risk factors
 full.df_5<- full.df_4.2
-full.df_5$smoking<- risk.factor.merger(full.df_5$TG_A_Rauchen,full.df_5$TG_RF_Rauchen)
-full.df_5$alcohol<- risk.factor.merger(full.df_5$TG_A_Alkohol,full.df_5$TG_RF_Alkohol)
-full.df_5$sport<- risk.factor.merger(full.df_5$TG_A_Sport,full.df_5$TG_RF_Sport)
+full.df_5$smoking<- risk.factor.merger(full.df_5$TG_A_Rauchen,
+                                       full.df_5$TG_RF_Rauchen)
+full.df_5$alcohol<- risk.factor.merger(full.df_5$TG_A_Alkohol,
+                                       full.df_5$TG_RF_Alkohol)
+full.df_5$sport<- risk.factor.merger(full.df_5$TG_A_Sport,
+                                     full.df_5$TG_RF_Sport)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ### add weather variables
@@ -374,7 +383,7 @@ for(di in c("TDI", "HW", "SDI")){
                                               y = model.list_2[[model.ind]],
                                               est.type = "quantile"))
         if(di == "SDI"){
-          processed.hyp<- as.vector(as.matrix(hyp$best_in_class[,12:21]))
+          processed.hyp<- unlist(hyp$best_in_class[,12:21])
           if(model.ind == 1){
             y.range<- 80
           }else{
@@ -426,7 +435,6 @@ performance.plots("phi", di = "SDI", practiceID = 6, galist = hyperpars_phi,
 performance.plots("chronic", di = "SDI", practiceID = 6, hyperpars_chronic,
                   y.name = "number of chronic diseases", y.range = c(0, 20))
 
-#effect on age is not shown (model.eval)
 ```
 Research question 2:
 ```{r}

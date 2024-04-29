@@ -1,12 +1,5 @@
 #############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions
 
-#icd10.to.class: finds the disease/ injury classification of an icd10 vector as listed in the preregistration
-#suspicious.Diag.entries: Since the icd10 field is a text field in the GP's software, the data might contain typing errors or atypical notation of diseases. This function returns a vector that filters out whose entries are =1 if they are 'suspicious' and 0 otherwise. An entry is considered suspicious if it does not have a length of 4, 6, or 7 characters. If it has 4, 6, or 7 characters it is suspicious if it does not follow either of the patterns 
-#1. capital letter, two numbers, capital letter
-#2. capital letter, two numbers, fullstop, one or two numbers, capital letter
-#
-
-
 icd10.to.class<- function(icd10vec){
   #finds the disease/ injury classification of an icd10 vector as listed in the preregistration
   first<- substr(icd10vec,1,1)
@@ -119,8 +112,7 @@ TG_DateNum2holiday<- function(tgdatenumvec){
 }
 
 IK2PKV<- function(IK.vector){
-  # IK.vector is a vector of IK codes; 0=publich health insurance, 1=private health insurance or no health insurance
-  # depends on ListeKrankenkassen
+  # IK.vector is a vector of IK codes; 0=publich health insurance, 1=private health insurance or no health insurance. Depends on ListeKrankenkassen[.csv]
   out<- ListeKrankenkassen$PKV[match(IK.vector,ListeKrankenkassen$IK)]
   out[is.na(out)]<- 1
   out[out==1]<- 1
@@ -888,6 +880,10 @@ genetic.algorithm<- function(optim.seed, n = 50, pcrossover = 0.8,
 }
 
 sdi.sampler<- function(i, no.samples, sdi_init){
+  # An internal function for genetic.algorithm. Creates a random parameter for the i-th SDI parameter.
+  # i is the index for the SDI parameter
+  # no.samples specifies how many samples are drawn for the specified parameter
+  # sdi_init the expected value of the parameters 4 to 10. 
   if(i==1){
     1 + rbetabinom.ab(no.samples, 20, 1.2, 1.2 * 13/7) #no. lags
   }else if(i==2){
@@ -1259,5 +1255,3 @@ model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed,
     dev.off()
   }
 }
-
-
