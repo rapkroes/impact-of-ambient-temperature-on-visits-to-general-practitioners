@@ -546,22 +546,24 @@ add.last.visit<-function(fdf, no.splits, no.workers){
   
   visit.cluster<- makeCluster(no.workers)
   dist.env<- environment()
-  clusterExport(cl = visit.cluster, varlist = c("part.dl","arrange"), envir = dist.env)
+  clusterExport(cl = visit.cluster, varlist = c("part.dl","arrange"), 
+                envir = dist.env)
   results<- parLapply(cl = visit.cluster, seq(1,no.splits), fun = function(k){
     df<- part.dl[[k]]|>
-      arrange(uniPatID,diag_class,TG_DateNum)
+      arrange(uniPatID, diag_class, TG_DateNum)
     n<- nrow(df)
-    selector<- df$uniPatID[1:(n-1)]==df$uniPatID[2:n] & df$diag_class[1:(n-1)]==df$diag_class[2:n]
-    out<- rep(NA,n)
-    for(i in seq(2,n)[selector]){
-      out[i]<- df$TG_DateNum[i]-df$TG_DateNum[i-1]
+    selector<- df$uniPatID[1:(n - 1)] == df$uniPatID[2:n] & 
+      df$diag_class[1:(n - 1)] == df$diag_class[2:n]
+    out<- rep(NA, n)
+    for(i in seq(2, n)[selector]){
+      out[i]<- df$TG_DateNum[i] - df$TG_DateNum[i - 1]
     }
     return(out)
   })
   
   for(i in seq_along(part.dl)){
     part.dl[[i]]<- part.dl[[i]]|>
-      arrange(uniPatID,diag_class,TG_DateNum)
+      arrange(uniPatID, diag_class, TG_DateNum)
     part.dl[[i]]$last_visit<- results[[i]]
   }
   out<- bind_rows(part.dl)
@@ -592,12 +594,13 @@ df_qx<- function(inputdf = full.df_7, di, q){
   out$covid_7_day_incidence<- inputdf$covid_7_day_incidence
   
   if(q==2){
-    out$age<- full.df_7$age
-    out$female<- full.df_7$female
-    out$PKV<- full.df_7$PKV
-    out$smoking<- full.df_7$smoking
-    out$alcohol<- full.df_7$alcohol
-    out$sport<- full.df_7$sport
+    out$age<- inputdf$age
+    out$female<- inputdf$female
+    out$PKV<- inputdf$PKV
+    out$smoking<- inputdf$smoking
+    out$alcohol<- inputdf$alcohol
+    out$sport<- inputdf$sport
+    out$last_visit<- inputdf$last_visit
     
     chronic.selector<- grepl("chronic", colnames(inputdf))
     addage<- inputdf[,chronic.selector]
