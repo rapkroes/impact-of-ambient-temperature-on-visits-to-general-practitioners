@@ -486,7 +486,8 @@ x.list<- list(PraxisID = as.numeric(levels(as.factor(full.df_7$PraxisID))),
               chronic_5 = seq(0, 10), chronic_6 = seq(0, 10), 
               chronic_7 = seq(0, 10), chronic_8 = seq(0, 10), 
               chronic_9 = seq(0, 10), chronic_10 = seq(0, 10), 
-              chronic_11 = seq(0, 10), no_all_chronic_diseases = seq(0, 20)
+              chronic_11 = seq(0, 10), no_all_chronic_diseases = seq(0, 20),
+              last_visit = seq(1, 56)
               )
 x.list.factors<- list(PraxisID = NA, 
                       dow = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"), 
@@ -501,7 +502,7 @@ x.list.factors<- list(PraxisID = NA,
                       chronic_4 = NA, chronic_5 = NA, chronic_6 = NA, 
                       chronic_7 = NA, chronic_8 = NA, chronic_9 = NA, 
                       chronic_10 = NA, chronic_11 = NA, 
-                      no_all_chronic_diseases = NA
+                      no_all_chronic_diseases = NA, last_visit = NA
               )
 sel.seed<- 7518269
 model.eval(booster = model_q2_TDI, DI = "TDI", Q = 2, no.draws = 100, 

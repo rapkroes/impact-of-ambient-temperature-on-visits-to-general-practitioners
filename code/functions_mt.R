@@ -583,6 +583,7 @@ df_qx<- function(inputdf = full.df_7, di, q){
     out<- inputdf[,grepl("temperature", colnames(inputdf)) | grepl("humidity", colnames(inputdf))]
   }
   
+  out$uniPatID<- inputdf$uniPatID
   out$PraxisID<- inputdf$PraxisID
   out$dow<- inputdf$dow
   out$public_holiday<- inputdf$public_holiday
@@ -608,6 +609,9 @@ df_qx<- function(inputdf = full.df_7, di, q){
     out<- cbind(out,addage)
   }
   
+  out<- out|>
+    distinct()|>
+    select(-uniPatID)
   return(out)
 }
 
@@ -662,7 +666,8 @@ wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth,
   
   blacklist<- c("thoms_discomfort_index", "length_heatwave", "sdi", 
                 "daylight_hours", "covid_7_day_incidence", "age", 
-                colnames(inputdf)[grep("chronic", colnames(inputdf))])
+                colnames(inputdf)[grep("chronic", colnames(inputdf))],
+                "last_visit")
   if(length(sdi)>1){
     sdi.weights<- dbetabinom.ab(x = seq(0,sdi[1]), size = sdi[1],
                                 shape1 = sdi[2], shape2 = sdi[3])
@@ -1200,7 +1205,7 @@ model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed,
                          "chronic_2", "chronic_3", "chronic_4", "chronic_5", 
                          "chronic_6", "chronic_7", "chronic_8", "chronic_9", 
                          "chronic_10", "chronic_11", "no_all_chronic_diseases",
-                         "length_heatwave", "sdi")
+                         "length_heatwave", "sdi", "last_visit")
   possible.xlab.names<- c("Thom's discomfort index", "practice no.", 
                           "day of the week", "public holiday", "school holiday",
                           "week of the month", "month", "year", 
@@ -1218,7 +1223,7 @@ model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed,
                           "chronic musculoskeletal disorders", 
                           "chronic other diseases and injuries", 
                           "all chronic diseases", "length heatwave", 
-                          "suggested discomfort index")
+                          "suggested discomfort index", "last visit")
   x.name<- possible.xlab.names[eval.var == possible.var.names]
   for(l in seq(1, k)){
     if(Q == 2){
