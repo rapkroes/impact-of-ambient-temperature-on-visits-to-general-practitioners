@@ -1,5 +1,43 @@
 #############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions
 
+daylight.extraction<- function(year.range){
+  # function to extract the daylight hours and save them to the working directory
+  # year.range is the sequence (!) of the years to be extracted for the thirteen different locations.
+  for(i in seq(1, nrow(location_information))){
+    dl.list<- list()
+    date.list<- list()
+    ticker<- 1
+    for(j in seq_along(year.range)){
+      sel.url<- paste0("https://aa.usno.navy.mil/calculated/durdaydark?year=",
+                       year.range[j], "&task=0&lat=", 
+                       round(location_information$latitude[i], 4), "&lon=",
+                       round(location_information$longitude[i], 4),
+                       "&label=ammerbuch&tz=1&tz_sign=1&submit=Get+Data")
+      website<- read_html(sel.url)
+      sel.table<- html_table(website)[[2]]
+      colnames(sel.table)<- sel.table[1,]
+      sel.table<- sel.table[-1, -1]
+      for(c in seq(1, 12)){
+        for(r in seq(1, 31)){
+          entry<- sel.table[r, c]
+          if(nchar(entry) > 0){
+            dl.list[[ticker]]<- as.numeric(substr(entry, 1, 2)) + 
+              as.numeric(substr(entry, 4, 5)) / 60
+            date.list[[ticker]]<- date2TG_DateNum(
+              paste(year.range[j], c, r, sep = "-")
+            )
+            ticker<- ticker +1
+          }
+        }
+      }
+    }
+    df<- data.frame(TG_DateNum = unlist(date.list), 
+                    daylight_hours = unlist(dl.list))
+    write.csv(df, paste0("daylight_", location_information$location.name[i], 
+                         ".csv"), row.names = FALSE)
+  }   
+}
+
 icd10.to.class<- function(icd10vec){
   #finds the disease/ injury classification of an icd10 vector as listed in the preregistration
   first<- substr(icd10vec,1,1)
