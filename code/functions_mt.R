@@ -1,5 +1,43 @@
 #############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions
 
+daylight.extraction<- function(year.range){
+  # function to extract the daylight hours and save them to the working directory
+  # year.range is the sequence (!) of the years to be extracted for the thirteen different locations.
+  for(i in seq(1, nrow(location_information))){
+    dl.list<- list()
+    date.list<- list()
+    ticker<- 1
+    for(j in seq_along(year.range)){
+      sel.url<- paste0("https://aa.usno.navy.mil/calculated/durdaydark?year=",
+                       year.range[j], "&task=0&lat=", 
+                       round(location_information$latitude[i], 4), "&lon=",
+                       round(location_information$longitude[i], 4),
+                       "&label=ammerbuch&tz=1&tz_sign=1&submit=Get+Data")
+      website<- read_html(sel.url)
+      sel.table<- html_table(website)[[2]]
+      colnames(sel.table)<- sel.table[1,]
+      sel.table<- sel.table[-1, -1]
+      for(c in seq(1, 12)){
+        for(r in seq(1, 31)){
+          entry<- sel.table[r, c]
+          if(nchar(entry) > 0){
+            dl.list[[ticker]]<- as.numeric(substr(entry, 1, 2)) + 
+              as.numeric(substr(entry, 4, 5)) / 60
+            date.list[[ticker]]<- date2TG_DateNum(
+              paste(year.range[j], c, r, sep = "-")
+            )
+            ticker<- ticker +1
+          }
+        }
+      }
+    }
+    df<- data.frame(TG_DateNum = unlist(date.list), 
+                    daylight_hours = unlist(dl.list))
+    write.csv(df, paste0("daylight_", location_information$location.name[i], 
+                         ".csv"), row.names = FALSE)
+  }   
+}
+
 icd10.to.class<- function(icd10vec){
   #finds the disease/ injury classification of an icd10 vector as listed in the preregistration
   first<- substr(icd10vec,1,1)
@@ -546,22 +584,24 @@ add.last.visit<-function(fdf, no.splits, no.workers){
   
   visit.cluster<- makeCluster(no.workers)
   dist.env<- environment()
-  clusterExport(cl = visit.cluster, varlist = c("part.dl","arrange"), envir = dist.env)
+  clusterExport(cl = visit.cluster, varlist = c("part.dl","arrange"), 
+                envir = dist.env)
   results<- parLapply(cl = visit.cluster, seq(1,no.splits), fun = function(k){
     df<- part.dl[[k]]|>
-      arrange(uniPatID,diag_class,TG_DateNum)
+      arrange(uniPatID, diag_class, TG_DateNum)
     n<- nrow(df)
-    selector<- df$uniPatID[1:(n-1)]==df$uniPatID[2:n] & df$diag_class[1:(n-1)]==df$diag_class[2:n]
-    out<- rep(NA,n)
-    for(i in seq(2,n)[selector]){
-      out[i]<- df$TG_DateNum[i]-df$TG_DateNum[i-1]
+    selector<- df$uniPatID[1:(n - 1)] == df$uniPatID[2:n] & 
+      df$diag_class[1:(n - 1)] == df$diag_class[2:n]
+    out<- rep(NA, n)
+    for(i in seq(2, n)[selector]){
+      out[i]<- df$TG_DateNum[i] - df$TG_DateNum[i - 1]
     }
     return(out)
   })
   
   for(i in seq_along(part.dl)){
     part.dl[[i]]<- part.dl[[i]]|>
-      arrange(uniPatID,diag_class,TG_DateNum)
+      arrange(uniPatID, diag_class, TG_DateNum)
     part.dl[[i]]$last_visit<- results[[i]]
   }
   out<- bind_rows(part.dl)
@@ -581,6 +621,7 @@ df_qx<- function(inputdf = full.df_7, di, q){
     out<- inputdf[,grepl("temperature", colnames(inputdf)) | grepl("humidity", colnames(inputdf))]
   }
   
+  out$uniPatID<- inputdf$uniPatID
   out$PraxisID<- inputdf$PraxisID
   out$dow<- inputdf$dow
   out$public_holiday<- inputdf$public_holiday
@@ -592,12 +633,13 @@ df_qx<- function(inputdf = full.df_7, di, q){
   out$covid_7_day_incidence<- inputdf$covid_7_day_incidence
   
   if(q==2){
-    out$age<- full.df_7$age
-    out$female<- full.df_7$female
-    out$PKV<- full.df_7$PKV
-    out$smoking<- full.df_7$smoking
-    out$alcohol<- full.df_7$alcohol
-    out$sport<- full.df_7$sport
+    out$age<- inputdf$age
+    out$female<- inputdf$female
+    out$PKV<- inputdf$PKV
+    out$smoking<- inputdf$smoking
+    out$alcohol<- inputdf$alcohol
+    out$sport<- inputdf$sport
+    out$last_visit<- inputdf$last_visit
     
     chronic.selector<- grepl("chronic", colnames(inputdf))
     addage<- inputdf[,chronic.selector]
@@ -605,6 +647,9 @@ df_qx<- function(inputdf = full.df_7, di, q){
     out<- cbind(out,addage)
   }
   
+  out<- out|>
+    distinct()|>
+    select(-uniPatID)
   return(out)
 }
 
@@ -659,7 +704,8 @@ wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth,
   
   blacklist<- c("thoms_discomfort_index", "length_heatwave", "sdi", 
                 "daylight_hours", "covid_7_day_incidence", "age", 
-                colnames(inputdf)[grep("chronic", colnames(inputdf))])
+                colnames(inputdf)[grep("chronic", colnames(inputdf))],
+                "last_visit")
   if(length(sdi)>1){
     sdi.weights<- dbetabinom.ab(x = seq(0,sdi[1]), size = sdi[1],
                                 shape1 = sdi[2], shape2 = sdi[3])
@@ -1197,7 +1243,7 @@ model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed,
                          "chronic_2", "chronic_3", "chronic_4", "chronic_5", 
                          "chronic_6", "chronic_7", "chronic_8", "chronic_9", 
                          "chronic_10", "chronic_11", "no_all_chronic_diseases",
-                         "length_heatwave", "sdi")
+                         "length_heatwave", "sdi", "last_visit")
   possible.xlab.names<- c("Thom's discomfort index", "practice no.", 
                           "day of the week", "public holiday", "school holiday",
                           "week of the month", "month", "year", 
@@ -1215,7 +1261,7 @@ model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed,
                           "chronic musculoskeletal disorders", 
                           "chronic other diseases and injuries", 
                           "all chronic diseases", "length heatwave", 
-                          "suggested discomfort index")
+                          "suggested discomfort index", "last visit")
   x.name<- possible.xlab.names[eval.var == possible.var.names]
   for(l in seq(1, k)){
     if(Q == 2){
