@@ -644,12 +644,14 @@ df_qx<- function(inputdf = full.df_7, di, q){
     chronic.selector<- grepl("chronic", colnames(inputdf))
     addage<- inputdf[,chronic.selector]
     colnames(addage)<- colnames(inputdf)[chronic.selector]
-    out<- cbind(out,addage)
+    out<- cbind(out, addage)
+    
+    out$diag_class<- inputdf$diag_class
   }
   
-  out<- out|>
-    distinct()|>
-    select(-uniPatID)
+  out<- distinct(out)
+  if(q == 2) assign("train_diag_class", out$diag_class - 1, envir = .GlobalEnv)
+  out<- select(out, -uniPatID)
   return(out)
 }
 
@@ -804,7 +806,6 @@ genetic.algorithm<- function(optim.seed, n = 50, pcrossover = 0.8,
                              inputdf, y, est_type, alpha = 0.5, cv = 5L,
                              no_trees = 100L, no_threads = 4L, 
                              early_stopping = 10L, seed = NA){
-  
   # A genetic algorithm that adapted from the ga function from the GA-package by Luca Scrucca (doi:10.18637/jss.v053.i04). The loss function is rounded to two significant digits; as secondary fitness evaluation speed is used.
   # optim.seed: start seed for optimization
   # n: number of members in the population
@@ -1300,4 +1301,57 @@ model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed,
     }
     dev.off()
   }
+}
+
+TDI.temperature.equivalent<- function(di.vec, rh){
+  # Turns a vector of Thom's discomfort index values into a vector of temperatures at specified humidity rh. 
+  # di.vec is the vector of discomfort values
+  # rh is the fixed value of humidity
+  rhf<- 1 - 0.01 * rh
+  out<- (di.vec - 7.975 * rhf) / (1 - 0.55 * rhf)
+  return(out)
+}
+
+rq2.performance.plot<- function(booster, di, no.draws, seed, 
+                                galist = hyperpars_q2){
+  set.seed(seed)
+  all.dates<- unique(full.df_7$TG_DateNum)
+  all.practices<- unique(full.df_7$PraxisID)
+  ticker<- 1
+  pred.df<- as.data.frame(matrix(NA, nrow = no.draws, ncol = ncol(full.df_7)))
+  colnames(pred.df)<- colnames(full.df_7)
+  while(ticker <= no.draws){
+    sel.date<- sample(all.dates, 1)
+    sel.practice<- sample(all.practices, 1)
+    opts<- which(full.df_7$TG_DateNum == sel.date & 
+                   full.df_7$PraxisID == sel.practice)
+    if(length(opts) >= 1){
+      sel<- sample(opts, 1)
+      pred.df[ticker,]<- full.df_7[sel,]
+      ticker<- ticker + 1
+    }
+  }
+  true.class<- pred.df$diag_class
+  pred.df<- df_qx(inputdf = pred.df, di = di, q = 2)
+  if(di == "SDI"){
+    pred.df$sdi<- ga2sdi(galist, pred.df)
+    col.deselector<- grepl("temperature", colnames(pred.df)) | 
+      grepl("humidity", colnames(pred.df))
+    pred.df<- pred.df[,!col.deselector]
+  }
+  pred.df<- data.matrix(pred.df)
+  class.predictions<- predict(object = booster, newdata = pred.df)
+  probabilities<- unlist(lapply(seq(1, nrow(pred.df)), FUN = function(x){
+   class.predictions[x, true.class[x]] 
+  }))
+  library(ggplot2)
+  hist<- ggplot(data.frame(probabilities), aes(x = probabilities)) +
+    geom_histogram(aes(y = after_stat(count / sum(count))),
+                   binwidth = 0.05, fill = "blue", colour = "blue") +
+    labs(title = paste("Histogram of predicted true class distribution for", di)
+         , x = "probability to predict the right class", y = "percentage") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_light()
+  ggsave(paste0("perf_RQ2_", di, ".png"), plot = hist)
+  detach("package:ggplot2", unload = TRUE)
 }
