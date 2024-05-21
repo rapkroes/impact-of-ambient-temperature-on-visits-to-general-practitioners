@@ -3,6 +3,7 @@
 daylight.extraction<- function(year.range){
   # function to extract the daylight hours and save them to the working directory
   # year.range is the sequence (!) of the years to be extracted for the thirteen different locations.
+  library(rvest)
   for(i in seq(1, nrow(location_information))){
     dl.list<- list()
     date.list<- list()
@@ -62,30 +63,36 @@ icd10.to.class<- function(icd10vec){
 }
 
 
-suspicious.Diag.entries<- function(icd10vec){
+suspicious.Diag.entries<- function(icd10vec, no.workers){
   #Since the icd10 field is a text field in the GP's software, the data might contain typing errors or atypical notation of diseases. This function returns a vector that filters out whose entries are =1 if they are 'suspicious' and 0 otherwise. An entry is considered suspicious if it does not have a length of 3, 5, or 6 characters. If it has 3, 5, or 6 characters it is suspicious if it does not follow either of the patterns 
   #1. capital letter, two numbers, capital letter
   #2. capital letter, two numbers, fullstop, one or two numbers, capital letter
-  first<- substr(icd10vec,1,1)
-  no<- as.numeric(substr(icd10vec,2,3))
-  out<- numeric(length(icd10vec))
-  
-  for(i in seq_along(icd10vec)){
-    entry<- icd10vec[i]
+  sus.cl<- makeCluster(no.workers)
+  clusterExport(sus.cl, varlist = c("icd10vec"), envir = environment())
+  result<- parSapply(sus.cl, seq(1, length(icd10vec)), FUN = function(k){
+    entry<- icd10vec[k]
     nc<- nchar(entry)
-    
-    pattern_1<- grepl("^[A-Z]\\d{2}[A-Z]$", entry)
-    pattern_2<- grepl("^[A-Z]\\d{2}\\.\\d{1,2}[A-Z]$", entry)
+    pattern.list<- c(grepl("^[A-Z]\\d{2}[A-Z]$", entry), 
+                     grepl("^[A-Z]\\d{2}\\.\\d{1,2}[A-Z]$", entry),
+                     grepl("^[A-Z]\\d{2}\\.[A-Z]$", entry),
+                     grepl("^[A-Z]\\d{2}\\.\\d{1,2}$", entry),
+                     grepl("^[A-Z]\\d{2}\\.$", entry),
+                     grepl("^[A-Z]\\d{2}[A-Z][A-Z]$", entry),
+                     grepl("^[A-Z]\\d{2}\\.\\d{1,2}[A-Z][A-Z]$", entry),
+                     grepl("^[A-Z]\\d{2}\\.[A-Z][A-Z]$", entry))
     has.comma.or.minus<- grepl("[,\\-]", entry)
-    
-    if(!(nc %in% c(3,5,6))){
-      out[i]<- 1
+    pattern.match<- any(pattern.list)
+    if((!pattern.match) | has.comma.or.minus){
+      out<- c(k, 1)
     }else{
-      if(!(pattern_1|pattern_2|has.comma.or.minus)){
-        out[i]<- 1
-      }
+      out<- c(k, 0)
     }
-  }
+    return(out)
+  })
+  im<- as.data.frame(matrix(unlist(result), ncol = 2, byrow = TRUE))
+  colnames(im)<- c("index", "sus")
+  im<- arrange(im, index)
+  out<- as.logical(im$sus)
   return(out)
 }
 
