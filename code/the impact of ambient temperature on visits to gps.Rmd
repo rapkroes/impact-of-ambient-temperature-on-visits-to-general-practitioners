@@ -55,7 +55,7 @@ location.name<- location_information$location.name
 
 #weather data
 for(i in seq_along(location.name)){
-  url_string<- paste0("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/weather%20data/wetter%20", location.name[i], ".csv")
+  url_string<- paste0("https://raw.githubusercontent.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/main/weather%20data/weather_", location.name[i], ".csv")
   im<- read.csv(url_string)
   colnames(im)<- c("time", "temperature_celsius", "relative_humidity", 
                    "dew_point", "apparent_temperature_celsius", "precipitation", 
@@ -112,6 +112,7 @@ Merging and transformation process, using Diag as baseline:
 ```{r}
 ### save workspace image regularily?
 make.saves<- FALSE
+global.workers<- 4
 
 ### acute and chronic diseases, last visit
 chronic.sel<- grepl("DD",Diag3$DiagTyp)
@@ -121,12 +122,12 @@ chronic.df<- data.frame(uniPatID = Diag3$uniPatID[chronic.sel],
 chronic.df$diag_category<- icd10.to.class(chronic.df$diag_category)
 full.df_1<- add.chronic(Diag3[!chronic.sel,], chronic.df)
 full.df_1$diag_class<- icd10.to.class(full.df_1$icd10)
-full.df_1.1<- add.last.visit(full.df_1, no.splits = 50, no.workers = 4)
+full.df_1.1<- add.last.visit(full.df_1, no.splits = 50, no.workers =global.workers)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ### stamm data
 full.df_1.2<- add.stamm.new.par(full.df_1.1, Stamm3, no.splits = 50, 
-                                no.workers = 4)
+                                no.workers =global.workers)
 # gender variable
 gender.selector<- full.df_1.2$Weibl==1 | full.df_1.2$Maennl==1 | 
   full.df_1.2$stamm.is.there==0
@@ -141,7 +142,8 @@ full.df_1.3$landkreis<- praxisID2location(full.df_1.3$PraxisID)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ### konsul
-full.df_2<- add.konsul(full.df_1.3, Konsul3, no.splits = 50, no.workers = 4)
+full.df_2<- add.konsul(full.df_1.3, Konsul3, no.splits = 50, 
+                       no.workers =global.workers)
 col.selector<- !duplicated(colnames(full.df_2))
 full.df_2.2<- full.df_2[,col.selector]
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
@@ -162,7 +164,7 @@ full.df_4<- full.df_3
 full.df_4$Landkreis_id<- praxis_id2landkreis_id(full.df_4$PraxisID)
 full.df_4<- full.df_4|>
   arrange(Landkreis_id,TG_DateNum)
-full.df_4.2<- add.covid(full.df_4,covid.data, no.workers = 4)
+full.df_4.2<- add.covid(full.df_4,covid.data, no.workers =global.workers)
 full.df_4.2$covid_positive_incidence<- full.df_4.2$covid_7_day_incidence > 0
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
@@ -178,12 +180,12 @@ if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), 
 
 ### add weather variables
 full.df_6<- full.df_5
-full.df_6<- add.weather(full.df_6, no.workers = 4)
+full.df_6<- add.weather(full.df_6, no.workers =global.workers)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ###add daylight data
 full.df_7<- full.df_6
-full.df_7<- add.daylight(full.df_6, no.workers = 4)|>
+full.df_7<- add.daylight(full.df_6, no.workers =global.workers)|>
   arrange(TG_DateNum)
 if(make.saves){
   save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
@@ -272,71 +274,74 @@ write.table(table_1, file = "table_1.csv", sep = "; ", row.names = FALSE)
 Research Question 1:
 ```{r}
 #Hyperparameter tuning
-hyperpars_age<- genetic.algorithm(optim.seed = 4567, n = 50, 
-                                    pcrossover = 0.8, pmutation = 0.1, 
-                                    maxiter = 3, elitism = 4, digits = c(2,3,3),
-                                    sdi = TRUE, lr = c(0,1), 
-                                    no.leaves = c(2,40), max.depth = c(1,10),
-                                    min.data.in.leaf = c(2,1e7), 
-                                    feature.fraction = c(0,1), cat.l2 = c(0,99),
-                                    extra.trees = c(0,1), top.rate = c(0,0.5),
-                                    other.rate = c(0,0.5), cat.smooth = c(0,99),
-                                    path.smooth = c(0,99),
-                                    inputdf = df_qx(di = "SDI", q = 1),
-                                    y = full.df_7$age, est_type = "quantile",
-                                    alpha = 0.5, cv = 2L, no_trees = 100L,
-                                    no_threads = 4L, early_stopping = 10L)
+hyperpars_age<- genetic.algorithm(optim.seed = 4567, n = 50,
+                                  pcrossover = 0.8, pmutation = 0.1,
+                                  maxiter = 3, elitism = 4, digits = c(2,3,3),
+                                  sdi = TRUE, lr = c(0,1), 
+                                  no.leaves = c(2,40), max.depth = c(1,10),
+                                  min.data.in.leaf = c(2,1e7), 
+                                  feature.fraction = c(0,1), cat.l2 = c(0,99),
+                                  extra.trees = c(0,1), top.rate = c(0,0.5),
+                                  other.rate = c(0,0.5), cat.smooth = c(0,99),
+                                  path.smooth = c(0,99),
+                                  inputdf = df_qx(di = "SDI", q = 1),
+                                  y = full.df_7$age, est_type = "quantile",
+                                  alpha = 0.5, cv = 2L, no_trees = 100L,
+                                  no_threads = global.workers, 
+                                  early_stopping = 10L)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 #add a later increase in number of significant digits
 
-hyperpars_gender<- genetic.algorithm(optim.seed = 4567, n = 50, 
-                                    pcrossover = 0.8, pmutation = 0.1, 
-                                    maxiter = 3, elitism = 4, digits = c(2,3,3),
-                                    sdi = TRUE, lr = c(0,1), 
-                                    no.leaves = c(2,40), max.depth = c(1,10),
-                                    min.data.in.leaf = c(2,1e7), 
-                                    feature.fraction = c(0,1), cat.l2 = c(0,99),
-                                    extra.trees = c(0,1), top.rate = c(0,0.5),
-                                    other.rate = c(0,0.5), cat.smooth = c(0,99),
-                                    path.smooth = c(0,99),
-                                    inputdf = df_qx(di = "SDI", q = 1),
-                                    y = full.df_7$female, 
-                                    est_type = "cross_entropy", alpha = 0.5, 
-                                    cv = 2L, no_trees = 100L, no_threads = 4L, 
-                                    early_stopping = 10L)
+hyperpars_gender<- genetic.algorithm(optim.seed = 4567, n = 50,
+                                     pcrossover = 0.8, pmutation = 0.1,
+                                     maxiter = 3, elitism = 4, digits = c(2,3,3),
+                                     sdi = TRUE, lr = c(0,1), 
+                                     no.leaves = c(2,40), max.depth = c(1,10),
+                                     min.data.in.leaf = c(2,1e7), 
+                                     feature.fraction = c(0,1), cat.l2 = c(0,99),
+                                     extra.trees = c(0,1), top.rate = c(0,0.5),
+                                     other.rate = c(0,0.5), cat.smooth = c(0,99),
+                                     path.smooth = c(0,99),
+                                     inputdf = df_qx(di = "SDI", q = 1),
+                                     y = full.df_7$female, 
+                                     est_type = "cross_entropy", alpha = 0.5, 
+                                     cv = 2L, no_trees = 100L, 
+                                     no_threads = global.workers, 
+                                     early_stopping = 10L)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
-hyperpars_phi<- genetic.algorithm(optim.seed = 4567, n = 50, 
-                                    pcrossover = 0.8, pmutation = 0.1, 
-                                    maxiter = 3, elitism = 4, digits = c(2,3,3),
-                                    sdi = TRUE, lr = c(0,1), 
-                                    no.leaves = c(2,40), max.depth = c(1,10),
-                                    min.data.in.leaf = c(2,1e7), 
-                                    feature.fraction = c(0,1), cat.l2 = c(0,99),
-                                    extra.trees = c(0,1), top.rate = c(0,0.5),
-                                    other.rate = c(0,0.5), cat.smooth = c(0,99),
-                                    path.smooth = c(0,99),
-                                    inputdf = df_qx(di = "SDI", q = 1),
-                                    y = full.df_7$PKV, est_type = "cross_entropy",
-                                    alpha = 0.5, cv = 2L, no_trees = 100L,
-                                    no_threads = 4L, early_stopping = 10)
+hyperpars_phi<- genetic.algorithm(optim.seed = 4567, n = 50,
+                                  pcrossover = 0.8, pmutation = 0.1,
+                                  maxiter = 3, elitism = 4, digits = c(2,3,3),
+                                  sdi = TRUE, lr = c(0,1), 
+                                  no.leaves = c(2,40), max.depth = c(1,10),
+                                  min.data.in.leaf = c(2,1e7), 
+                                  feature.fraction = c(0,1), cat.l2 = c(0,99),
+                                  extra.trees = c(0,1), top.rate = c(0,0.5),
+                                  other.rate = c(0,0.5), cat.smooth = c(0,99),
+                                  path.smooth = c(0,99),
+                                  inputdf = df_qx(di = "SDI", q = 1),
+                                  y = full.df_7$PKV, est_type = "cross_entropy",
+                                  alpha = 0.5, cv = 2L, no_trees = 100L,
+                                  no_threads = global.workers, early_stopping = 10)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
-hyperpars_chronic<- genetic.algorithm(optim.seed = 4567, n = 50, 
-                                    pcrossover = 0.8, pmutation = 0.1, 
-                                    maxiter = 3, elitism = 4, digits = c(2,3,3),
-                                    sdi = TRUE, lr = c(0,1), 
-                                    no.leaves = c(2,40), max.depth = c(1,10),
-                                    min.data.in.leaf = c(2,1e7), 
-                                    feature.fraction = c(0,1), cat.l2 = c(0,99),
-                                    extra.trees = c(0,1), top.rate = c(0,0.5),
-                                    other.rate = c(0,0.5), cat.smooth = c(0,99),
-                                    path.smooth = c(0,99),
-                                    inputdf = df_qx(di = "SDI", q = 1),
-                                    y = full.df_7$no_all_chronic_diseases, 
-                                    est_type = "quantile", alpha = 0.5, cv = 2L,
-                                    no_trees = 100L, no_threads = 4L, 
-                                    early_stopping = 10L)
+hyperpars_chronic<- genetic.algorithm(optim.seed = 4567, n = 50,
+                                      pcrossover = 0.8, pmutation = 0.1, 
+                                      maxiter = 3, elitism = 4, digits = c(2,3,3),
+                                      sdi = TRUE, lr = c(0,1), 
+                                      no.leaves = c(2,40), max.depth = c(1,10),
+                                      min.data.in.leaf = c(2,1e7),
+                                      feature.fraction = c(0,1), cat.l2 = c(0,99),
+                                      extra.trees = c(0,1), top.rate = c(0,0.5),
+                                      other.rate = c(0,0.5), cat.smooth = c(0,99),
+                                      path.smooth = c(0,99),
+                                      inputdf = df_qx(di = "SDI", q = 1),
+                                      y = full.df_7$no_all_chronic_diseases, 
+                                      est_type = "quantile", alpha = 0.5, cv = 2L,
+                                      no_trees = 100L, 
+                                      no_threads = global.workers, 
+                                      early_stopping = 10L)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 model.list_1<- list(age = "quantile", gender = "cross_entropy", 
@@ -369,7 +374,8 @@ for(di in c("TDI", "HW", "SDI")){
                                     y = model.list_2[[model.ind]], 
                                     est.type = "quantile", 
                                     alpha = as.numeric(quant),
-                                    no.trees = 100L, no.threads = 4L))
+                                    no.trees = 100L, no.threads = global.workers
+                                    ))
         perf.name<- paste0("perf.", names(model.list_1)[model.ind], quant, "_", 
                            di)
         assign(perf.name, ga2performance.eval(hyp, alpha = as.numeric(quant),
@@ -400,7 +406,7 @@ for(di in c("TDI", "HW", "SDI")){
                                   y = model.list_2[[model.ind]],
                                   est.type = "cross_entropy", 
                                   alpha = as.numeric(quant), no.trees = 100L, 
-                                  no.threads = 4L))
+                                  no.threads = global.workers))
       perf.name<- paste0("perf.", names(model.list_1)[model.ind], "_", di)
       assign(perf.name, ga2performance.eval(hyp,
                                             inputdf = df_qx(di = di, q = 1),
@@ -433,6 +439,7 @@ performance.plots("chronic", di = "SDI", practiceID = 6, hyperpars_chronic,
 Research question 2:
 ```{r}
 #Hyperparameter tuning
+q2_SDI<- df_qx(di = "SDI", q = 2)
 hyperpars_q2<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8, 
                                  pmutation = 0.1, maxiter = 3, elitism = 4, 
                                  digits = c(2,3,3), sdi = TRUE, lr = c(0,1), 
@@ -443,32 +450,41 @@ hyperpars_q2<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8,
                                  other.rate = c(0,0.5), cat.smooth = c(0,99), 
                                  path.smooth = c(0,99),
                                  inputdf = df_qx(di = "SDI", q = 2),
-                                 y = full.df_7$diag_class - 1, 
+                                 y = train_diag_class, 
                                  est_type = "multiclass", cv = 2L, 
-                                 no_trees = 100L, no_threads = 4L, 
+                                 no_trees = 100L, no_threads = global.workers, 
                                  early_stopping = 10L)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 model_q2_TDI<- ga2model(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2),
-                     y = full.df_7$diag_class - 1, est.type = "multiclass",
-                     no.trees = 100L, no.threads = 4L)
+                     y = train_diag_class, est.type = "multiclass",
+                     no.trees = 100L, no.threads = global.workers)
 model_q2_HW<- ga2model(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2),
-                     y = full.df_7$diag_class - 1, est.type = "multiclass",
-                     no.trees = 100L, no.threads = 4L)
+                     y = train_diag_class, est.type = "multiclass",
+                     no.trees = 100L, no.threads = global.workers)
 model_q2_SDI<- ga2model(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2),
-                     y = full.df_7$diag_class - 1, est.type = "multiclass",
-                     no.trees = 100L, no.threads = 4L)
+                     y = train_diag_class, est.type = "multiclass",
+                     no.trees = 100L, no.threads = global.workers)
 
 # performance eval
-perf.q2_TDI<- ga2performance.eval(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2), 
-                    y = full.df_7$diag_class - 1, est.type = "multiclass",
-                    cv = 10)
-perf.q2_HW<- ga2performance.eval(hyperpars_q2, inputdf = df_qx(di = "HW", q = 2), 
-                    y = full.df_7$diag_class - 1, est.type = "multiclass",
-                    cv = 10)
-perf.q2_SDI<- ga2performance.eval(hyperpars_q2, inputdf = df_qx(di = "SDI", q = 2), 
-                    y = full.df_7$diag_class - 1, est.type = "multiclass",
-                    cv = 10)
+perf.q2_TDI<- ga2performance.eval(hyperpars_q2, 
+                                  inputdf = df_qx(di = "TDI", q = 2),
+                                  y = train_diag_class, 
+                                  est.type = "multiclass", 
+                                  cv = 10)
+rq2.performance.plot(model_q2_TDI, di = "TDI", no.draws = 5000, seed = 1261)
+perf.q2_HW<- ga2performance.eval(hyperpars_q2, 
+                                 inputdf = df_qx(di = "HW", q = 2),
+                                 y = train_diag_class, 
+                                 est.type = "multiclass",
+                                 cv = 10)
+rq2.performance.plot(model_q2_HW, di = "HW", no.draws = 5000, seed = 1261)
+perf.q2_SDI<- ga2performance.eval(hyperpars_q2, 
+                                  inputdf = df_qx(di = "SDI", q = 2),
+                                  y = train_diag_class, 
+                                  est.type = "multiclass",
+                                  cv = 10)
+rq2.performance.plot(model_q2_SDI, di = "SDI", no.draws = 5000, seed = 1261)
 
 # eval of output
 x.list<- list(PraxisID = as.numeric(levels(as.factor(full.df_7$PraxisID))), 
@@ -486,7 +502,8 @@ x.list<- list(PraxisID = as.numeric(levels(as.factor(full.df_7$PraxisID))),
               chronic_5 = seq(0, 10), chronic_6 = seq(0, 10), 
               chronic_7 = seq(0, 10), chronic_8 = seq(0, 10), 
               chronic_9 = seq(0, 10), chronic_10 = seq(0, 10), 
-              chronic_11 = seq(0, 10), no_all_chronic_diseases = seq(0, 20)
+              chronic_11 = seq(0, 10), no_all_chronic_diseases = seq(0, 20),
+              last_visit = seq(1, 56)
               )
 x.list.factors<- list(PraxisID = NA, 
                       dow = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"), 
@@ -501,7 +518,7 @@ x.list.factors<- list(PraxisID = NA,
                       chronic_4 = NA, chronic_5 = NA, chronic_6 = NA, 
                       chronic_7 = NA, chronic_8 = NA, chronic_9 = NA, 
                       chronic_10 = NA, chronic_11 = NA, 
-                      no_all_chronic_diseases = NA
+                      no_all_chronic_diseases = NA, last_visit = NA
               )
 sel.seed<- 7518269
 model.eval(booster = model_q2_TDI, DI = "TDI", Q = 2, no.draws = 100, 

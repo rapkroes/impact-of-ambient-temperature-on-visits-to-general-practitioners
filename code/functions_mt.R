@@ -1,5 +1,43 @@
 #############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions#############functions
 
+daylight.extraction<- function(year.range){
+  # function to extract the daylight hours and save them to the working directory
+  # year.range is the sequence (!) of the years to be extracted for the thirteen different locations.
+  for(i in seq(1, nrow(location_information))){
+    dl.list<- list()
+    date.list<- list()
+    ticker<- 1
+    for(j in seq_along(year.range)){
+      sel.url<- paste0("https://aa.usno.navy.mil/calculated/durdaydark?year=",
+                       year.range[j], "&task=0&lat=", 
+                       round(location_information$latitude[i], 4), "&lon=",
+                       round(location_information$longitude[i], 4),
+                       "&label=ammerbuch&tz=1&tz_sign=1&submit=Get+Data")
+      website<- read_html(sel.url)
+      sel.table<- html_table(website)[[2]]
+      colnames(sel.table)<- sel.table[1,]
+      sel.table<- sel.table[-1, -1]
+      for(c in seq(1, 12)){
+        for(r in seq(1, 31)){
+          entry<- sel.table[r, c]
+          if(nchar(entry) > 0){
+            dl.list[[ticker]]<- as.numeric(substr(entry, 1, 2)) + 
+              as.numeric(substr(entry, 4, 5)) / 60
+            date.list[[ticker]]<- date2TG_DateNum(
+              paste(year.range[j], c, r, sep = "-")
+            )
+            ticker<- ticker +1
+          }
+        }
+      }
+    }
+    df<- data.frame(TG_DateNum = unlist(date.list), 
+                    daylight_hours = unlist(dl.list))
+    write.csv(df, paste0("daylight_", location_information$location.name[i], 
+                         ".csv"), row.names = FALSE)
+  }   
+}
+
 icd10.to.class<- function(icd10vec){
   #finds the disease/ injury classification of an icd10 vector as listed in the preregistration
   first<- substr(icd10vec,1,1)
@@ -546,22 +584,24 @@ add.last.visit<-function(fdf, no.splits, no.workers){
   
   visit.cluster<- makeCluster(no.workers)
   dist.env<- environment()
-  clusterExport(cl = visit.cluster, varlist = c("part.dl","arrange"), envir = dist.env)
+  clusterExport(cl = visit.cluster, varlist = c("part.dl","arrange"), 
+                envir = dist.env)
   results<- parLapply(cl = visit.cluster, seq(1,no.splits), fun = function(k){
     df<- part.dl[[k]]|>
-      arrange(uniPatID,diag_class,TG_DateNum)
+      arrange(uniPatID, diag_class, TG_DateNum)
     n<- nrow(df)
-    selector<- df$uniPatID[1:(n-1)]==df$uniPatID[2:n] & df$diag_class[1:(n-1)]==df$diag_class[2:n]
-    out<- rep(NA,n)
-    for(i in seq(2,n)[selector]){
-      out[i]<- df$TG_DateNum[i]-df$TG_DateNum[i-1]
+    selector<- df$uniPatID[1:(n - 1)] == df$uniPatID[2:n] & 
+      df$diag_class[1:(n - 1)] == df$diag_class[2:n]
+    out<- rep(NA, n)
+    for(i in seq(2, n)[selector]){
+      out[i]<- df$TG_DateNum[i] - df$TG_DateNum[i - 1]
     }
     return(out)
   })
   
   for(i in seq_along(part.dl)){
     part.dl[[i]]<- part.dl[[i]]|>
-      arrange(uniPatID,diag_class,TG_DateNum)
+      arrange(uniPatID, diag_class, TG_DateNum)
     part.dl[[i]]$last_visit<- results[[i]]
   }
   out<- bind_rows(part.dl)
@@ -581,6 +621,7 @@ df_qx<- function(inputdf = full.df_7, di, q){
     out<- inputdf[,grepl("temperature", colnames(inputdf)) | grepl("humidity", colnames(inputdf))]
   }
   
+  out$uniPatID<- inputdf$uniPatID
   out$PraxisID<- inputdf$PraxisID
   out$dow<- inputdf$dow
   out$public_holiday<- inputdf$public_holiday
@@ -592,19 +633,25 @@ df_qx<- function(inputdf = full.df_7, di, q){
   out$covid_7_day_incidence<- inputdf$covid_7_day_incidence
   
   if(q==2){
-    out$age<- full.df_7$age
-    out$female<- full.df_7$female
-    out$PKV<- full.df_7$PKV
-    out$smoking<- full.df_7$smoking
-    out$alcohol<- full.df_7$alcohol
-    out$sport<- full.df_7$sport
+    out$age<- inputdf$age
+    out$female<- inputdf$female
+    out$PKV<- inputdf$PKV
+    out$smoking<- inputdf$smoking
+    out$alcohol<- inputdf$alcohol
+    out$sport<- inputdf$sport
+    out$last_visit<- inputdf$last_visit
     
     chronic.selector<- grepl("chronic", colnames(inputdf))
     addage<- inputdf[,chronic.selector]
     colnames(addage)<- colnames(inputdf)[chronic.selector]
-    out<- cbind(out,addage)
+    out<- cbind(out, addage)
+    
+    out$diag_class<- inputdf$diag_class
   }
   
+  out<- distinct(out)
+  if(q == 2) assign("train_diag_class", out$diag_class - 1, envir = .GlobalEnv)
+  out<- select(out, -uniPatID)
   return(out)
 }
 
@@ -659,7 +706,8 @@ wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth,
   
   blacklist<- c("thoms_discomfort_index", "length_heatwave", "sdi", 
                 "daylight_hours", "covid_7_day_incidence", "age", 
-                colnames(inputdf)[grep("chronic", colnames(inputdf))])
+                colnames(inputdf)[grep("chronic", colnames(inputdf))],
+                "last_visit")
   if(length(sdi)>1){
     sdi.weights<- dbetabinom.ab(x = seq(0,sdi[1]), size = sdi[1],
                                 shape1 = sdi[2], shape2 = sdi[3])
@@ -758,7 +806,6 @@ genetic.algorithm<- function(optim.seed, n = 50, pcrossover = 0.8,
                              inputdf, y, est_type, alpha = 0.5, cv = 5L,
                              no_trees = 100L, no_threads = 4L, 
                              early_stopping = 10L, seed = NA){
-  
   # A genetic algorithm that adapted from the ga function from the GA-package by Luca Scrucca (doi:10.18637/jss.v053.i04). The loss function is rounded to two significant digits; as secondary fitness evaluation speed is used.
   # optim.seed: start seed for optimization
   # n: number of members in the population
@@ -1197,7 +1244,7 @@ model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed,
                          "chronic_2", "chronic_3", "chronic_4", "chronic_5", 
                          "chronic_6", "chronic_7", "chronic_8", "chronic_9", 
                          "chronic_10", "chronic_11", "no_all_chronic_diseases",
-                         "length_heatwave", "sdi")
+                         "length_heatwave", "sdi", "last_visit")
   possible.xlab.names<- c("Thom's discomfort index", "practice no.", 
                           "day of the week", "public holiday", "school holiday",
                           "week of the month", "month", "year", 
@@ -1215,7 +1262,7 @@ model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed,
                           "chronic musculoskeletal disorders", 
                           "chronic other diseases and injuries", 
                           "all chronic diseases", "length heatwave", 
-                          "suggested discomfort index")
+                          "suggested discomfort index", "last visit")
   x.name<- possible.xlab.names[eval.var == possible.var.names]
   for(l in seq(1, k)){
     if(Q == 2){
@@ -1254,4 +1301,57 @@ model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed,
     }
     dev.off()
   }
+}
+
+TDI.temperature.equivalent<- function(di.vec, rh){
+  # Turns a vector of Thom's discomfort index values into a vector of temperatures at specified humidity rh. 
+  # di.vec is the vector of discomfort values
+  # rh is the fixed value of humidity
+  rhf<- 1 - 0.01 * rh
+  out<- (di.vec - 7.975 * rhf) / (1 - 0.55 * rhf)
+  return(out)
+}
+
+rq2.performance.plot<- function(booster, di, no.draws, seed, 
+                                galist = hyperpars_q2){
+  set.seed(seed)
+  all.dates<- unique(full.df_7$TG_DateNum)
+  all.practices<- unique(full.df_7$PraxisID)
+  ticker<- 1
+  pred.df<- as.data.frame(matrix(NA, nrow = no.draws, ncol = ncol(full.df_7)))
+  colnames(pred.df)<- colnames(full.df_7)
+  while(ticker <= no.draws){
+    sel.date<- sample(all.dates, 1)
+    sel.practice<- sample(all.practices, 1)
+    opts<- which(full.df_7$TG_DateNum == sel.date & 
+                   full.df_7$PraxisID == sel.practice)
+    if(length(opts) >= 1){
+      sel<- sample(opts, 1)
+      pred.df[ticker,]<- full.df_7[sel,]
+      ticker<- ticker + 1
+    }
+  }
+  true.class<- pred.df$diag_class
+  pred.df<- df_qx(inputdf = pred.df, di = di, q = 2)
+  if(di == "SDI"){
+    pred.df$sdi<- ga2sdi(galist, pred.df)
+    col.deselector<- grepl("temperature", colnames(pred.df)) | 
+      grepl("humidity", colnames(pred.df))
+    pred.df<- pred.df[,!col.deselector]
+  }
+  pred.df<- data.matrix(pred.df)
+  class.predictions<- predict(object = booster, newdata = pred.df)
+  probabilities<- unlist(lapply(seq(1, nrow(pred.df)), FUN = function(x){
+   class.predictions[x, true.class[x]] 
+  }))
+  library(ggplot2)
+  hist<- ggplot(data.frame(probabilities), aes(x = probabilities)) +
+    geom_histogram(aes(y = after_stat(count / sum(count))),
+                   binwidth = 0.05, fill = "blue", colour = "blue") +
+    labs(title = paste("Histogram of predicted true class distribution for", di)
+         , x = "probability to predict the right class", y = "percentage") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_light()
+  ggsave(paste0("perf_RQ2_", di, ".png"), plot = hist)
+  detach("package:ggplot2", unload = TRUE)
 }

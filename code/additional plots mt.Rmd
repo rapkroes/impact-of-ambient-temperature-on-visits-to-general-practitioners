@@ -126,6 +126,49 @@ ggplot(df, aes(x = week)) +
   theme(plot.title = element_text(hjust = 0.5)) 
 
 ```
+```{r}
+### Harvesting simulation
+
+n_mc<- 60
+patients<- 1000
+p_disease<- function(k) ifelse(k > 10 & k <= 20, 0.055, 0.05)
+p_recovery<- 0.2
+healthy<- numeric(n_mc)
+diseased<- numeric(n_mc)
+healthy[1]<- 800
+diseased[1]<- 200
+for(i in seq(2, n_mc)){
+  recovered<- diseased[i - 1] * p_recovery
+  fallen<- healthy[i - 1] * p_disease(i)
+  healthy[i]<- healthy[i - 1] - fallen + recovered
+  diseased[i]<- patients - healthy[1]
+}
+plot.ts(healthy)
+
+weather<- numeric(n_mc)
+weather[11:20]<- 1
+DI<- function(w) 
+  
+  
+n_mc<- 21
+patients<- 1000
+p_disease<- function(k) ifelse(k == 11, 0.1, 0.05)
+p_recovery<- 0.2
+healthy<- numeric(n_mc)
+diseased<- numeric(n_mc)
+healthy[1]<- 800
+diseased[1]<- 200
+for(i in seq(2, n_mc)){
+  recovered<- diseased[i - 1] * p_recovery
+  fallen<- healthy[i - 1] * p_disease(i)
+  healthy[i]<- healthy[i - 1] - fallen + recovered
+  diseased[i]<- patients - healthy[1]
+}
+plot.ts(healthy)
+
+DI<- unlist(sapply(seq(1, n_mc), p_disease))
+
+```
 
 ```{r}
 ####harvest effect simulation

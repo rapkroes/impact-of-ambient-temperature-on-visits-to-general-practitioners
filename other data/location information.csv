@@ -1,14 +1,20 @@
 location.name,latitude,longitude,klarname,landkreis,landkreis_id,praxis_ids
-aalen,48.8,10.1,Aalen, Ostalbkreis,8136,3
-ammerbuch,48.6,9,Ammerbuch, Tübingen,8416,
-baiersbronn,48.5,8.4,Baiersbronn, Freudenstadt,8237,"1,2"
-boeblingen,48.7,9,Böblingen, Böblingen,8115,5
-boennigheim,49,9.1,Bönnigheim, Ludwigsburg,8118,
-pforzheim,48.9,8.7,Pforzheim, Pforzheim,8231,
-pleidelsheim,49,9.2,Pleidelsheim, Ludwigsburg,8118,
-salach,48.7,9.7,Salach, Göppingen,8117,
-schluchsee,47.8,8.2,Schluchsee, Breisgau-Hochschwarzwald,8315,
-schopfheim,47.7,7.8,Schopfheim, Lörrach,8336,6
-schwaebisch_gmuend,48.8,9.8,Schwäbisch Gmünd, Ostalbkreis,8136,
-waldachtal,48.5,8.6,Waldachtal, Freudenstadt,8237,4
-wendlingen,48.7,9.4,Wendlingen am Neckar, Esslingen,8116,8
+aalen,48.83777,10.0933,Aalen, Ostalbkreis,8136,3
+ammerbuch,48.55343,8.97218,Ammerbuch, Tübingen,8416,
+baiersbronn,48.50318,8.37699,Baiersbronn, Freudenstadt,8237,"1,2"
+boeblingen,48.68212,9.01171,Böblingen, Böblingen,8115,5
+boennigheim,49.04018,9.09386,Bönnigheim, Ludwigsburg,8118,
+pforzheim,48.88436,8.69892,Pforzheim, Pforzheim,8231,
+pleidelsheim,48.9592,9.20311,Pleidelsheim, Ludwigsburg,8118,
+salach,48.69198,9.73715,Salach, Göppingen,8117,
+schluchsee,47.81667,8.18333,Schluchsee, Breisgau-Hochschwarzwald,8315,
+schopfheim,47.65105,7.82089,Schopfheim, Lörrach,8336,6
+schwaebisch_gmuend,48.79947,9.79809,Schwäbisch Gmünd, Ostalbkreis,8136,
+waldachtal,48.489444,8.564722,Waldachtal, Freudenstadt,8237,4
+wendlingen,48.67124,9.37632,Wendlingen am Neckar, Esslingen,8116,8
+karlsruhe,49.00937,8.40444,Karlsruhe,Karlsruhe,8215,
+buchen,49.52416,9.32293,Buchen,Neckar-Odenwald-Kreis,8225,
+mosbach,49.35357,9.15106,Mosbach,Neckar-Odenwald-Kreis,8225,
+pohlheim,50.525,8.733333,Pohlheim,Gießen,6531,
+stuttgart,48.78232,9.17702,Stuttgart,,8111,
+aichtal,48.62638,9.26315,Aichtal,Esslingen,8116,
