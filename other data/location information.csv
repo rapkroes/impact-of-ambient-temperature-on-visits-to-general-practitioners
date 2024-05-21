@@ -1,7 +1,7 @@
 location.name;latitude;longitude;klarname;landkreis;landkreis_id;praxis_ids
 aalen;4.883.777;100.933;Aalen; Ostalbkreis;8136;12
 ammerbuch;4.855.343;897.218;Ammerbuch; Tübingen;8416;3
-baiersbronn;4.850.318;837.699;Baiersbronn; Freudenstadt;8237;""9,10""
+baiersbronn;4.850.318;837.699;Baiersbronn; Freudenstadt;8237;9
 boeblingen;4.868.212;901.171;Böblingen; Böblingen;8115;14
 boennigheim;4.904.018;909.386;Bönnigheim; Ludwigsburg;8118;8
 pforzheim;4.888.436;869.892;Pforzheim; Pforzheim;8231;2
