@@ -345,12 +345,14 @@ weatherdata.transformation<- function(wdf, sel.quantile=NA, sel.temperature_kelv
   #loc is a character string which is used to specify the location where the wdf data were recorded
   #dr is the date range of the diagnosis data
   full.wdf<- wdf
-  n_before<- sum(full.wdf$TG_DateNum<dr[1])/24
+  n_before<- sum(full.wdf$TG_DateNum < dr[1]) / 24
   wdf<- wdf|>
-    filter(TG_DateNum>=dr[1] & TG_DateNum<=dr[2])
+    filter(TG_DateNum >= dr[1] & TG_DateNum <= dr[2])
   if(is.na(sel.quantile) & is.na(sel.temperature_kelvin)) stop("Either sel.quantile or sel.temperature has to be a numeric number. The other one has to be NA.")
-  daily.mean.temperature_kelvin<- colMeans(matrix(wdf$temperature_kelvin, nrow = 24))
-  daily.mean.relative.humidity<- colMeans(matrix(wdf$relative_humidity, nrow = 24))
+  daily.mean.temperature_kelvin<- colMeans(matrix(wdf$temperature_kelvin, 
+                                                  nrow = 24))
+  daily.mean.relative.humidity<- colMeans(matrix(wdf$relative_humidity, 
+                                                 nrow = 24))
   dates<- unique(wdf$TG_DateNum)
   length.heatwave<- numeric(length = length(dates))
   if(is.na(sel.temperature_kelvin)){

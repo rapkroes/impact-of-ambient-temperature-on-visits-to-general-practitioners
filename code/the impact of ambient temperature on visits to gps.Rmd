@@ -30,15 +30,15 @@ classification.matrix<- read.csv("https://raw.githubusercontent.com/rapkroes/imp
 icd10_blocks<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/icd10_blocks.csv")
 holidays<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/numeric_holidays.csv")
 
-fake.data<- TRUE
+fake.data<- FALSE
 if(fake.data){
   source_url("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/code/fakedgp_mt.R")
 }else{
   old.wd<- getwd()
-  setwd("N:/StudentischeHilfskraefte/_Kroes (Christoph)/Routinedaten/01_Husten/R/DB")
-  names.vec<- c("Diag3", "Stamm3", "Konsul3")
+  setwd("N:/StudentischeHilfskraefte/_Kroes (Christoph)/Routinedaten/03_Hitze/DB")
+  names.vec<- c("Diag1", "Stamm1", "Konsul1")
   for (i in seq(1,length(names.vec))){
-    file.name<- paste0("DB_", names.vec[i], "_v03", ".csv")
+    file.name<- paste0("DB_", names.vec[i], "_v01", ".csv")
     im.file<- read.csv(file = file.name, header = TRUE, sep = ";")
     assign(names.vec[i], im.file)
   }
@@ -46,8 +46,8 @@ if(fake.data){
   setwd(old.wd)
 }
 
-#date range
-date.range<- range(Diag3$TG_DateNum)
+#date range: Jan. 1st, 2000 to December 31st, 2023
+date.range<- c(730485, 739250)
 
 #location data
 location_information<- read.csv("https://github.com/rapkroes/impact-of-ambient-temperature-on-visits-to-general-practitioners/raw/main/other%20data/location%20information.csv", header = TRUE, encoding = "Latin-1")
@@ -66,8 +66,8 @@ for(i in seq_along(location.name)){
   im<- im|>
     filter(TG_DateNum>=date.range[1]-21 & TG_DateNum<=date.range[2])
   im$temperature_kelvin<- im$temperature_celsius +273.16
-  
-  weatherdata.transformation(im, sel.quantile = .95, loc = location.name[i], 
+
+  weatherdata.transformation(im, sel.quantile = .95, loc = location.name[i],
                              dr = date.range)
   #assign(paste0("wetter_",location.name[i]),im)
 }
@@ -99,7 +99,7 @@ covid.data$TG_DateNum<- date2TG_DateNum(covid.data$Meldedatum)
 ```
 We must check Diag's icd10 column: Since the icd10 field is a text field in the GP's software, the data might contain typing errors or atypical notation of diseases. This function returns a vector that filters out whose entries are =1 if they are 'suspicious' and 0 otherwise. An entry is considered suspicious if it does not have a length of 4, 6, or 7 characters. If it has 4, 6, or 7 characters it is suspicious if it does not follow either of the patterns "capital letter, two numbers, capital letter" or "capital letter, two numbers, fullstop, one or two numbers, capital letter".
 ```{r}
-View(Diag3[as.logical(suspicious.Diag.entries(Diag3$icd10)),])
+View(Diag1[as.logical(suspicious.Diag.entries(Diag1$icd10)),])
 ```
 
 Merging and transformation process, using Diag as baseline:
@@ -115,18 +115,18 @@ make.saves<- FALSE
 global.workers<- 4
 
 ### acute and chronic diseases, last visit
-chronic.sel<- grepl("DD",Diag3$DiagTyp)
-chronic.df<- data.frame(uniPatID = Diag3$uniPatID[chronic.sel], 
-                        diag_category = Diag3$icd10[chronic.sel])|>
+chronic.sel<- grepl("DD",Diag1$DiagTyp)
+chronic.df<- data.frame(uniPatID = Diag1$uniPatID[chronic.sel], 
+                        diag_category = Diag1$icd10[chronic.sel])|>
   distinct()
 chronic.df$diag_category<- icd10.to.class(chronic.df$diag_category)
-full.df_1<- add.chronic(Diag3[!chronic.sel,], chronic.df)
+full.df_1<- add.chronic(Diag1[!chronic.sel,], chronic.df)
 full.df_1$diag_class<- icd10.to.class(full.df_1$icd10)
 full.df_1.1<- add.last.visit(full.df_1, no.splits = 50, no.workers =global.workers)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ### stamm data
-full.df_1.2<- add.stamm.new.par(full.df_1.1, Stamm3, no.splits = 50, 
+full.df_1.2<- add.stamm.new.par(full.df_1.1, Stamm1, no.splits = 50, 
                                 no.workers =global.workers)
 # gender variable
 gender.selector<- full.df_1.2$Weibl==1 | full.df_1.2$Maennl==1 | 
@@ -142,7 +142,7 @@ full.df_1.3$landkreis<- praxisID2location(full.df_1.3$PraxisID)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
 
 ### konsul
-full.df_2<- add.konsul(full.df_1.3, Konsul3, no.splits = 50, 
+full.df_2<- add.konsul(full.df_1.3, Konsul1, no.splits = 50, 
                        no.workers =global.workers)
 col.selector<- !duplicated(colnames(full.df_2))
 full.df_2.2<- full.df_2[,col.selector]

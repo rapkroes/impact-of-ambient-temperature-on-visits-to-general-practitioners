@@ -4,7 +4,7 @@ duration<- numeric(n_mc)
 set.seed(45165)
 data.size<- 1000*sample(1:100,n_mc, replace = TRUE)
 split.vec<- sample(2:500, n_mc, replace = TRUE)
-workers<- sample(2:6, n_mc, replace = TRUE)
+workers<- sample(seq(20, 48, by = 4), n_mc, replace = TRUE)
 for(i in seq(71,n_mc)){
   if(data.size[i]>8*split.vec[i]){
     art.data(data.size[i])
