@@ -67,7 +67,7 @@ for(i in seq_along(location.name)){
     filter(TG_DateNum>=date.range[1]-21 & TG_DateNum<=date.range[2])
   im$temperature_kelvin<- im$temperature_celsius +273.16
 
-  weatherdata.transformation(im, sel.quantile = .95, loc = location.name[i],
+  weatherdata.transformation(im, sel.quantile = .90, loc = location.name[i],
                              dr = date.range)
   #assign(paste0("wetter_",location.name[i]),im)
 }
@@ -124,7 +124,10 @@ chronic.df<- data.frame(uniPatID = Diag1$uniPatID[chronic.sel],
                         diag_category = Diag1$icd10[chronic.sel])|>
   distinct()
 chronic.df$diag_category<- icd10.to.class(chronic.df$diag_category)
-full.df_1<- add.chronic(Diag1[!chronic.sel,], chronic.df)
+im<- Diag1[!chronic.sel,]|>
+  filter(TG_DateNum >= date.range[1] & TG_DateNum <= date.range[2])|>
+  distinct()
+full.df_1<- add.chronic(im, chronic.df)
 full.df_1$diag_class<- icd10.to.class(full.df_1$icd10)
 full.df_1.1<- add.last.visit(full.df_1, no.splits = 50, no.workers =global.workers)
 if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
