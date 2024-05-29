@@ -97,13 +97,13 @@ covid.data$TG_DateNum<- date2TG_DateNum(covid.data$Meldedatum)
 
 
 ```
-We must check Diag's icd10 column: Since the icd10 field is a text field in the GP's software, the data might contain typing errors or atypical notation of diseases. This function returns a vector that filters out whose entries are =1 if they are 'suspicious' and 0 otherwise. An entry is considered suspicious if it does not have a length of 4, 6, or 7 characters. If it has 4, 6, or 7 characters it is suspicious if it does not follow either of the patterns "capital letter, two numbers, capital letter" or "capital letter, two numbers, fullstop, one or two numbers, capital letter".
+We must check Diag's icd10 column: Since the icd10 field is a text field in the GP's software, the data might contain typing errors or atypical notation of diseases, which survived pre-processing. Several patterns are tested. ICD-10 codes to not meet either of the patterns are discarded.
 ```{r}
 sus.entry.vec<- suspicious.Diag.entries(icd10vec = Diag1$icd10, no.workers = 10)
-diag_im<- Diag1
-diag_im$class<- icd10.to.class(diag_im$icd10)
-View(diag_im[as.logical(sus.entry.vec),])
-View(data.frame(diag_entry = Diag1$icd10[sus.entry.vec], class = icd10.to.class(Diag1$icd10[sus.entry.vec])))
+diag_sus<- Diag1
+diag_sus$class<- icd10.to.class(diag_sus$icd10)
+View(diag_sus[sus.entry.vec,])
+diag_rm.sus<- Diag1[!sus.entry.vec,]
 ```
 
 Merging and transformation process, using Diag as baseline:
@@ -116,15 +116,15 @@ Merging and transformation process, using Diag as baseline:
 ```{r}
 ### save workspace image regularily?
 make.saves<- FALSE
-global.workers<- 4
+global.workers<- 10
 
 ### acute and chronic diseases, last visit
-chronic.sel<- grepl("DD",Diag1$DiagTyp)
-chronic.df<- data.frame(uniPatID = Diag1$uniPatID[chronic.sel], 
-                        diag_category = Diag1$icd10[chronic.sel])|>
+chronic.sel<- grepl("DD",diag_rm.sus$DiagTyp)
+chronic.df<- data.frame(uniPatID = diag_rm.sus$uniPatID[chronic.sel], 
+                        diag_category = diag_rm.sus$icd10[chronic.sel])|>
   distinct()
 chronic.df$diag_category<- icd10.to.class(chronic.df$diag_category)
-im<- Diag1[!chronic.sel,]|>
+im<- diag_rm.sus[!chronic.sel,]|>
   filter(TG_DateNum >= date.range[1] & TG_DateNum <= date.range[2])|>
   distinct()
 full.df_1<- add.chronic(im, chronic.df)
