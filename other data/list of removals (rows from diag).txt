@@ -1,2 +1,0 @@
-list of removals (rows from diag)
-14970, 14971, 15095, 15096, 15101, 15102, 

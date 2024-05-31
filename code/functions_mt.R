@@ -364,6 +364,7 @@ weatherdata.transformation<- function(wdf, sel.quantile=NA, sel.temperature_kelv
   length.heatwave<- numeric(length = length(dates))
   if(is.na(sel.temperature_kelvin)){
     threshold<- quantile(daily.mean.temperature_kelvin, probs=sel.quantile)
+    assign(paste0("temp.threshold_", loc), threshold, envir = .GlobalEnv)
     above.threshold<- daily.mean.temperature_kelvin>=threshold
   }else{
     above.threshold<- daily.mean.temperature_kelvin>=sel.temperature_kelvin
