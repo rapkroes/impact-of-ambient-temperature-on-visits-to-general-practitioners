@@ -115,8 +115,8 @@ Merging and transformation process, using Diag as baseline:
 6. Create risk factors variables
 ```{r}
 ### save workspace image regularily?
-make.saves<- FALSE
-global.workers<- 10
+make.saves<- TRUE
+global.workers<- 4
 
 ### acute and chronic diseases, last visit
 chronic.sel<- grepl("DD",diag_rm.sus$DiagTyp)
