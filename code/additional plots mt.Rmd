@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r}
-#Heatwaves: 97% quantile
+#Heatwaves: 95% quantile
 
 library(ggplot2)
 wetter.baiersbronn <- read.csv("C:/Users/Raphael (limited)/Desktop/Master Thesis/weather data/wetter baiersbronn.csv")
@@ -176,13 +176,17 @@ ggsave("harvest_sim.png", plot = harvest.plot, width = 8, height = 4.5, device =
 tdi<- function(T, RH){
   0.45 * T - 0.08 * RH + 5.5 / 1000 * T * RH + 8
 }
-t.vec<- seq(-10, 40)
-rh.vec<- seq(0, 1, by = 0.2)
-tdi.vis.df<- as.data.frame(matrix(NA, nrow = 51, ncol = 6))
-for(i in seq(1, 6)){
-  tdi.vis.df[,i]<- tdi(t.vec, rh.vec[i])
+t.vec<- seq(-10, 35)
+rh.vec<- seq(0, 1, by = 0.1)
+tdi.vec<- list()
+for(i in seq_along(rh.vec)){
+  tdi.vec[[i]]<- unlist(sapply(t.vec, function(x) tdi(x, rh.vec[i])))
 }
-tdi.vis.df$temperature<- t.vec
-tdi.plot<- ggplot(tdi.vis.df, aes(x = temperature, y = ))
+tdi.vec<- unlist(tdi.vec)
+tdi.vis.df<- data.frame(TDI = tdi.vec, RH = order(rep(rh.vec, length(t.vec))),
+                        T = rep(t.vec, length(rh.vec)))|>
+  arrange(T, RH)
+
+persp(x = tdi.vis.df$T, y = tdi.vis.df$RH, z = tdi.vis.df$TDI)
 ```
 
