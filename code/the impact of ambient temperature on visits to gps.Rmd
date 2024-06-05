@@ -45,6 +45,9 @@ if(fake.data){
   rm(file.name, im.file)
   setwd(old.wd)
 }
+Diag1<- variable.purger(Diag1, rm.all.PraxisID = TRUE)
+Stamm1<- variable.purger(Stamm1, rm.all.PraxisID = FALSE)
+Konsul1<- variable.purger(Konsul1, rm.all.PraxisID = TRUE)
 
 #date range: Jan. 1st, 2000 to December 31st, 2023
 date.range<- c(730485, 739250)

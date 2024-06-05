@@ -62,7 +62,6 @@ icd10.to.class<- function(icd10vec){
   return(out)
 }
 
-
 suspicious.Diag.entries<- function(icd10vec, no.workers){
   #Since the icd10 field is a text field in the GP's software, the data might contain typing errors or atypical notation of diseases. This function returns a vector that filters out whose entries are =1 if they are 'suspicious' and 0 otherwise. An entry is considered suspicious if it does not have a length of 3, 5, or 6 characters. If it has 3, 5, or 6 characters it is suspicious if it does not follow either of the patterns 
   #1. capital letter, two numbers, capital letter
@@ -109,12 +108,10 @@ variable.purger<- function(df, rm.all.PraxisID = FALSE){
   return(out)
 }
 
-
 TG_DateNum2date<- function(TG_DateNum){
   #takes a vector of TG_DateNum dates and returns them as yyyy-mm-dd dates
   as.Date(TG_DateNum, origin = "0000-01-01")
 }
-
 
 TG_DateNum2dow<- function(tgdatenumvec){
   #takes a vector of TG_DateNum dates and returns them as their respective days of the week as ordered factor variable
