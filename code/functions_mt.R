@@ -96,6 +96,19 @@ suspicious.Diag.entries<- function(icd10vec, no.workers){
   return(out)
 }
 
+variable.purger<- function(df, rm.all.PraxisID = FALSE){
+  name.vec<- colnames(df)
+  sel<- !(name.vec %in% c("index_i", "PatID"))
+  praxis_sel<- which(name.vec == "PraxisID")
+  if(rm.all.PraxisID){
+    sel[praxis_sel]<- FALSE
+  }else{
+    sel[praxis_sel[-1]]<- FALSE
+  }
+  out<- df[,sel]
+  return(out)
+}
+
 
 TG_DateNum2date<- function(TG_DateNum){
   #takes a vector of TG_DateNum dates and returns them as yyyy-mm-dd dates
