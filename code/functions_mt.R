@@ -57,26 +57,52 @@ workspace.save<- function(save.choice, userprofile = "UKSH"){
   }
 }
 
-icd10.to.class<- function(icd10vec){
+icd10.to.class<- function(icd10vec, no.workers, cm = classification.matrix){
   #finds the disease/ injury classification of an icd10 vector as listed in the preregistration
   first<- substr(icd10vec,1,1)
   no<- as.numeric(substr(icd10vec,2,3))
-  out<- numeric(length(icd10vec))
+  #out<- numeric(length(icd10vec))
   
-  for(i in seq_along(out)){
-    selector<- which(first[i] == classification.matrix$letter  &
-                       no[i] >= classification.matrix$start_no & 
-                       no[i] <= classification.matrix$end_no)
-    if(length(selector)==0){
-      out[i]<- 11
-    }else if(length(selector)==1){
-      out[i]<- classification.matrix$class[selector]
+  icdcluster<- makeCluster(no.workers)
+  clusterExport(icdcluster, varlist = c("first", "no", "cm"), envir = environment())
+  result<- parSapply(icdcluster, seq_along(first), function(k){
+    if(!any(is.na(c(first[k], no[k])))){
+      selector<- which(first[k] == cm$letter  & no[k] >= cm$start_no & 
+                         no[k] <= cm$end_no)
+      if(length(selector) == 0){
+        out<- c(k, 11)
+      }else if(length(selector) == 1){
+        out<- c(k, cm$class[selector])
+      }else{
+        stop(paste("For entry",i, "selector has a length longer than 1."))
+      }
     }else{
-      stop(paste("For entry",i, "selector has a length longer than 1."))
+      out<- c(k, NA)
     }
-  }
-  out[grepl("P81.0", icd10vec)]<- 2
-  
+    return(out)
+  })
+  # for(i in seq_along(out)){
+  #   if(!any(is.na(c(first, no)))){
+  #     selector<- which(first[i] == classification.matrix$letter  &
+  #                        no[i] >= classification.matrix$start_no & 
+  #                        no[i] <= classification.matrix$end_no)
+  #     if(length(selector)==0){
+  #       out[i]<- 11
+  #     }else if(length(selector)==1){
+  #       out[i]<- classification.matrix$class[selector]
+  #     }else{
+  #       stop(paste("For entry",i, "selector has a length longer than 1."))
+  #     }
+  #   }else{
+  #     out[i]<- NA
+  #   }
+  # }
+  # out[grepl("P81.0", icd10vec)]<- 2
+  im<- matrix(unlist(result), ncol = 2, byrow = TRUE)|>
+    as.data.frame()
+  colnames(im)<- c("k", "class")
+  im<- arrange(im, "k")
+  out<- im$class
   return(out)
 }
 
@@ -330,45 +356,61 @@ add.konsul<- function(edf,sdf, no.splits,no.workers){
 
 praxisID2location<- function(praxisID){
   # takes an atomic vector of PraxisIDs with length >=1 and returns a vector of the same length with the name of the practices' municipalities.
-  l<- length(praxisID)
-  out<- numeric(length = l)
-  for(i in seq_along(praxisID)){
-    if(praxisID[i]==1 | praxisID[i]==2){
-      out[i]<- "baiersbronn"
-    }else if(praxisID[i]==3){
-      out[i]<- "aalen"
-    }else if(praxisID[i]==4){
-      out[i]<- "waldachtal"
-    }else if(praxisID[i]==5){
-      out[i]<- "boeblingen"
-    }else if(praxisID[i]==6){
-      out[i]<- "schluchsee"
-    }else if(praxisID[i]==8){
-      out[i]<- "wendlingen"
-    }
+  sel_1<- !is.na(location_information$praxis_ids)
+  pid<- location_information$praxis_ids[sel_1]
+  lid<- location_information$location.name[sel_1]
+  out<- numeric(length(praxisID))
+  for(i in seq_along(pid)){
+    sel_2<- praxisID == pid[i]
+    out[sel_2]<- lid[i]
   }
+  # l<- length(praxisID)
+  # out<- numeric(length = l)
+  # for(i in seq_along(praxisID)){
+  #   if(praxisID[i]==1 | praxisID[i]==2){
+  #     out[i]<- "baiersbronn"
+  #   }else if(praxisID[i]==3){
+  #     out[i]<- "aalen"
+  #   }else if(praxisID[i]==4){
+  #     out[i]<- "waldachtal"
+  #   }else if(praxisID[i]==5){
+  #     out[i]<- "boeblingen"
+  #   }else if(praxisID[i]==6){
+  #     out[i]<- "schluchsee"
+  #   }else if(praxisID[i]==8){
+  #     out[i]<- "wendlingen"
+  #   }
+  # }
   return(out)
 }
 
 praxisID2location_id<- function(praxisID){
   # takes an atomic vector of PraxisIDs with length >=1 and returns a vector of the same length with the name of the practices' location IDs
-  l<- length(praxisID)
-  out<- numeric(length = l)
-  for(i in seq_along(praxisID)){
-    if(praxisID[i]==1 | praxisID[i]==2){
-      out[i]<- 8237
-    }else if(praxisID[i]==3){
-      out[i]<- 8136
-    }else if(praxisID[i]==4){
-      out[i]<- 8237
-    }else if(praxisID[i]==5){
-      out[i]<- 8115
-    }else if(praxisID[i]==6){
-      out[i]<- 8315
-    }else if(praxisID[i]==8){
-      out[i]<- 8116
-    }
+  sel_1<- !is.na(location_information$praxis_ids)
+  pid<- location_information$praxis_ids[sel_1]
+  lid<- location_information$landkreis_id[sel_1]
+  out<- numeric(length(praxisID))
+  for(i in seq_along(pid)){
+    sel_2<- praxisID == pid[i]
+    out[sel_2]<- lid[i]
   }
+  # l<- length(praxisID)
+  # out<- numeric(length = l)
+  # for(i in seq_along(praxisID)){
+  #   if(praxisID[i]==1 | praxisID[i]==2){
+  #     out[i]<- 8237
+  #   }else if(praxisID[i]==3){
+  #     out[i]<- 8136
+  #   }else if(praxisID[i]==4){
+  #     out[i]<- 8237
+  #   }else if(praxisID[i]==5){
+  #     out[i]<- 8115
+  #   }else if(praxisID[i]==6){
+  #     out[i]<- 8315
+  #   }else if(praxisID[i]==8){
+  #     out[i]<- 8116
+  #   }
+  # }
   return(out)
 }
 
@@ -423,7 +465,7 @@ weatherdata.transformation<- function(wdf, sel.quantile=NA, sel.temperature_kelv
   assign(paste0("transformed_weather_",loc),out, envir = .GlobalEnv)
 }
 
-add.weather<- function(fdf,no.workers){
+add.weather<- function(fdf, no.workers){
   # merges weather data to the incident data frame.
   locations<- unique(fdf$landkreis)
   fl<- list()
@@ -507,11 +549,19 @@ add.chronic<- function(diagdf,chronicdf){
 
 praxis_id2landkreis_id<- function(practiceids){
   # transforms an atomic vector of practiceIDs into a vector of Landkreis IDs.
-  practiceids<- as.character(practiceids)
+  sel_1<- !is.na(location_information$praxis_ids)
+  pid<- location_information$praxis_ids[sel_1]
+  lid<- location_information$landkreis_id[sel_1]
   out<- numeric(length(practiceids))
-  for(i in seq_along(practiceids)){
-    out[i]<- location_information$landkreis_id[grepl(practiceids[i],location_information$praxis_ids)]
+  for(i in seq_along(pid)){
+    sel_2<- practiceids == pid[i]
+    out[sel_2]<- lid[i]
   }
+  # practiceids<- as.character(practiceids)
+  # out<- numeric(length(practiceids))
+  # for(i in seq_along(practiceids)){
+  #   out[i]<- location_information$landkreis_id[grepl(practiceids[i],location_information$praxis_ids)]
+  # }
   return(out)
 }
 
@@ -530,22 +580,23 @@ add.covid<- function(df,cdf, no.workers){
   dist.env<- environment()
   covid.cluster<- makeCluster(no.workers)
   clusterExport(cl = covid.cluster, varlist = c("dl","cl"), envir = dist.env)
-  result<- parLapply(covid.cluster,seq_along(all.location.ids),fun = function(k){
-    base.data<- dl[[k]]
-    covid.addage<- cl[[k]]
-    
-    out<- numeric(nrow(base.data))
-    dates<- unique(base.data$TG_DateNum)
-    for(i in seq_along(dates)){
-      selector<- base.data$TG_DateNum==dates[i]
-      if(any(covid.addage$TG_DateNum==dates[i])){
-        out[selector]<- covid.addage$Inzidenz_7.Tage[covid.addage$TG_DateNum==dates[i]]
-      }
-    }
-    out<- cbind(base.data,out)
-    colnames(out)<- c(colnames(base.data),"covid_7_day_incidence")
-    return(out)
-  })
+  result<- parLapply(covid.cluster, seq_along(all.location.ids),
+                     fun = function(k){
+                       base.data<- dl[[k]]
+                       covid.addage<- cl[[k]]
+                       out<- numeric(nrow(base.data))
+                       dates<- unique(base.data$TG_DateNum)
+                       for(i in seq_along(dates)){
+                         selector<- base.data$TG_DateNum==dates[i]
+                         if(any(covid.addage$TG_DateNum==dates[i])){
+                           out[selector]<- covid.addage$Inzidenz_7.Tage[covid.addage$TG_DateNum==dates[i]]
+                         }
+                       }
+                       out<- cbind(base.data,out)
+                       colnames(out)<- c(colnames(base.data),
+                                         "covid_7_day_incidence")
+                       return(out)
+                     })
   
   out<- result[[1]]
   for(i in seq(2,length(result))){
@@ -563,8 +614,7 @@ add.daylight<- function(fdf,no.workers){
   for(i in seq_along(ids)){
     fdl[[i]]<- fdf|>
       filter(PraxisID==ids[i])
-    dldl[[i]]<- get(paste0("daylight_",
-                           location_information$location.name[grepl(ids[i],location_information$praxis_ids)]),
+    dldl[[i]]<- get(paste0("daylight_", praxisID2location(ids[i])), 
                     envir = .GlobalEnv)
   }
   
@@ -687,7 +737,7 @@ df_qx<- function(inputdf = full.df_7, di, q){
     out$diag_class<- inputdf$diag_class
   }
   
-  out<- distinct(out)
+  # out<- distinct(out)
   if(q == 2) assign("train_diag_class", out$diag_class - 1, envir = .GlobalEnv)
   out<- select(out, -uniPatID)
   return(out)

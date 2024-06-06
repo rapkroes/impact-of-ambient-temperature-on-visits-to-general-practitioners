@@ -95,18 +95,15 @@ covid.data<- covid.data|>
   filter(Landkreis_id %in% location_information$landkreis_id)
 covid.data$TG_DateNum<- date2TG_DateNum(covid.data$Meldedatum)
 
-
-
-
-
+workspace.save(TRUE)
 ```
 We must check Diag's icd10 column: Since the icd10 field is a text field in the GP's software, the data might contain typing errors or atypical notation of diseases, which survived pre-processing. Several patterns are tested. ICD-10 codes to not meet either of the patterns are discarded.
 ```{r}
-sus.entry.vec<- suspicious.Diag.entries(icd10vec = Diag1$icd10, no.workers = 4)
+sus.entry.vec<- suspicious.Diag.entries(icd10vec = Diag1$icd10, no.workers = 10)
 diag_sus<- Diag1
-diag_sus$class<- icd10.to.class(diag_sus$icd10)
+diag_sus$class<- icd10.to.class(diag_sus$icd10, no.workers = 10)
 View(diag_sus[sus.entry.vec,])
-diag_rm.sus<- Diag1[!sus.entry.vec,]
+diag_rm.sus<- Diag1[(!sus.entry.vec) & !is.na(diag_sus$class),]
 ```
 
 Merging and transformation process, using Diag as baseline:
@@ -126,14 +123,17 @@ chronic.sel<- grepl("DD",diag_rm.sus$Typ)
 chronic.df<- data.frame(uniPatID = diag_rm.sus$uniPatID[chronic.sel], 
                         diag_category = diag_rm.sus$icd10[chronic.sel])|>
   distinct()
-chronic.df$diag_category<- icd10.to.class(chronic.df$diag_category)
+chronic.df$diag_category<- icd10.to.class(chronic.df$diag_category, 
+                                          no.workers = global.workers)
 im<- diag_rm.sus[!chronic.sel,]|>
   filter(TG_DateNum >= date.range[1] & TG_DateNum <= date.range[2])|>
   distinct()
 full.df_1<- add.chronic(im, chronic.df)
-full.df_1$diag_class<- icd10.to.class(full.df_1$icd10)
-full.df_1.1<- add.last.visit(full.df_1, no.splits = 50, no.workers =global.workers)
-if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
+full.df_1$diag_class<- icd10.to.class(full.df_1$icd10, 
+                                      no.workers = global.workers)
+full.df_1.1<- add.last.visit(full.df_1, no.splits = 50, 
+                             no.workers = global.workers)
+workspace.save(make.saves)
 
 ### stamm data
 full.df_1.2<- add.stamm.new.par(full.df_1.1, Stamm1, no.splits = 50, 
@@ -149,14 +149,14 @@ full.df_1.3$PKV[full.df_1.3$stamm.is.there == 1]<- IK2PKV(
   full.df_1.3$IK[full.df_1.3$stamm.is.there==1])
 #add Landkreis_id
 full.df_1.3$landkreis<- praxisID2location(full.df_1.3$PraxisID)
-if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
+workspace.save(make.saves)
 
 ### konsul
 full.df_2<- add.konsul(full.df_1.3, Konsul1, no.splits = 50, 
                        no.workers =global.workers)
 col.selector<- !duplicated(colnames(full.df_2))
 full.df_2.2<- full.df_2[,col.selector]
-if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
+workspace.save(make.saves)
 
 ### time
 full.df_3<- full.df_2.2
@@ -167,7 +167,7 @@ full.df_3$week_of_month<- TG_DateNum2week.of.month(full.df_3$TG_DateNum)
 full.df_3$month<- as.factor(TG_DateNum2month(full.df_3$TG_DateNum))
 full.df_3$year<- as.factor(TG_DateNum2year(full.df_3$TG_DateNum))
 full.df_3$age<- TG_DateNum2year(full.df_3$TG_DateNum) - full.df_3$Geburtsjahr
-if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
+workspace.save(make.saves)
 
 ### covid-19
 full.df_4<- full.df_3
@@ -176,31 +176,32 @@ full.df_4<- full.df_4|>
   arrange(Landkreis_id,TG_DateNum)
 full.df_4.2<- add.covid(full.df_4,covid.data, no.workers =global.workers)
 full.df_4.2$covid_positive_incidence<- full.df_4.2$covid_7_day_incidence > 0
-if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
+workspace.save(make.saves)
 
 ### risk factors
 full.df_5<- full.df_4.2
-full.df_5$smoking<- risk.factor.merger(full.df_5$TG_A_Rauchen,
-                                       full.df_5$TG_RF_Rauchen)
-full.df_5$alcohol<- risk.factor.merger(full.df_5$TG_A_Alkohol,
-                                       full.df_5$TG_RF_Alkohol)
-full.df_5$sport<- risk.factor.merger(full.df_5$TG_A_Sport,
-                                     full.df_5$TG_RF_Sport)
-if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
+full.df_5$smoking<- risk.factor.merger(full.df_5$A_Rauchen,
+                                       full.df_5$RF_Rauchen)
+full.df_5$alcohol<- risk.factor.merger(full.df_5$A_Alkohol,
+                                       full.df_5$RF_Alkohol)
+full.df_5$sport<- risk.factor.merger(full.df_5$A_Sport,
+                                     full.df_5$RF_Sport)
+workspace.save(make.saves)
 
 ### add weather variables
 full.df_6<- full.df_5
 full.df_6<- add.weather(full.df_6, no.workers =global.workers)
-if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
+workspace.save(make.saves)
 
 ###add daylight data
 full.df_7<- full.df_6
 full.df_7<- add.daylight(full.df_6, no.workers =global.workers)|>
   arrange(TG_DateNum)
 if(make.saves){
-  save.image(file = paste0("ws_",as.character(as.Date(Sys.time(), format = "%Y_%m_%d")),".RData"))
-  write.csv2(full.df_7, file = "final_df.csv", row.names = FALSE)
+  workspace.save(make.saves)
+  write.table(full.df_7, file = file.path("N:/StudentischeHilfskraefte/_Kroes (Christoph)/Routinedaten/03_Hitze/R/final_df.csv"), row.names = FALSE)
 }
+
 ```
 Table 1 (descriptive statistics):
 ```{r}
@@ -278,7 +279,7 @@ table_1<- data.frame(Metric = c("Total number of patients",
                                mean(full.df_7$alcohol[!duplicated(full.df_7$uniPatID)], na.rm = TRUE),#35
                                mean(full.df_7$sport[!duplicated(full.df_7$uniPatID)], na.rm = TRUE)
                                ))
-write.table(table_1, file = "table_1.csv", sep = "; ", row.names = FALSE)
+write.table(table_1, file = file.path("N:/StudentischeHilfskraefte/_Kroes (Christoph)/Routinedaten/03_Hitze/R/table_1.csv"), sep = "; ", row.names = FALSE)
 
 ```
 Research Question 1:
@@ -299,7 +300,7 @@ hyperpars_age<- genetic.algorithm(optim.seed = 4567, n = 50,
                                   alpha = 0.5, cv = 2L, no_trees = 100L,
                                   no_threads = global.workers, 
                                   early_stopping = 10L)
-if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
+workspace.save(make.saves)
 #add a later increase in number of significant digits
 
 hyperpars_gender<- genetic.algorithm(optim.seed = 4567, n = 50,
@@ -318,7 +319,7 @@ hyperpars_gender<- genetic.algorithm(optim.seed = 4567, n = 50,
                                      cv = 2L, no_trees = 100L, 
                                      no_threads = global.workers, 
                                      early_stopping = 10L)
-if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
+workspace.save(make.saves)
 
 hyperpars_phi<- genetic.algorithm(optim.seed = 4567, n = 50,
                                   pcrossover = 0.8, pmutation = 0.1,
@@ -334,7 +335,7 @@ hyperpars_phi<- genetic.algorithm(optim.seed = 4567, n = 50,
                                   y = full.df_7$PKV, est_type = "cross_entropy",
                                   alpha = 0.5, cv = 2L, no_trees = 100L,
                                   no_threads = global.workers, early_stopping = 10)
-if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
+workspace.save(make.saves)
 
 hyperpars_chronic<- genetic.algorithm(optim.seed = 4567, n = 50,
                                       pcrossover = 0.8, pmutation = 0.1, 
@@ -352,7 +353,7 @@ hyperpars_chronic<- genetic.algorithm(optim.seed = 4567, n = 50,
                                       no_trees = 100L, 
                                       no_threads = global.workers, 
                                       early_stopping = 10L)
-if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
+workspace.save(make.saves)
 
 model.list_1<- list(age = "quantile", gender = "cross_entropy", 
                     phi = "cross_entropy", chronic = "quantile")
@@ -464,7 +465,7 @@ hyperpars_q2<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8,
                                  est_type = "multiclass", cv = 2L, 
                                  no_trees = 100L, no_threads = global.workers, 
                                  early_stopping = 10L)
-if(make.saves) save.image(file = paste0("ws_", as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), ".RData"))
+workspace.save(make.saves)
 
 model_q2_TDI<- ga2model(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2),
                      y = train_diag_class, est.type = "multiclass",
