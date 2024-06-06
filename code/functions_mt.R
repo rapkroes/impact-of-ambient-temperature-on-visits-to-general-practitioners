@@ -39,6 +39,24 @@ daylight.extraction<- function(year.range){
   }   
 }
 
+workspace.save<- function(save.choice, userprofile = "UKSH"){
+  # wrapper for savin the work space image
+  if(save.choice){
+    if(userprofile == "local"){
+      save.image(file = paste0("ws_", as.character(as.Date(
+        Sys.time(), format = "%Y_%m_%d")), ".RData"))
+    }else if(userprofile == "UKSH"){
+      save.image(file = file.path(
+        paste0("N:/StudentischeHilfskraefte/_Kroes (Christoph)/Routinedaten/03_Hitze/R/ws_", 
+               as.character(as.Date(Sys.time(), format = "%Y_%m_%d")), 
+               "_new.RData")))
+    }else{
+      warning("The work space is not set to either of the default locations.")
+      save.image(file = userprofile)
+    }
+  }
+}
+
 icd10.to.class<- function(icd10vec){
   #finds the disease/ injury classification of an icd10 vector as listed in the preregistration
   first<- substr(icd10vec,1,1)
