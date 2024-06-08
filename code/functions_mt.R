@@ -61,7 +61,6 @@ icd10.to.class<- function(icd10vec, no.workers, cm = classification.matrix){
   #finds the disease/ injury classification of an icd10 vector as listed in the preregistration
   first<- substr(icd10vec,1,1)
   no<- as.numeric(substr(icd10vec,2,3))
-  #out<- numeric(length(icd10vec))
   
   icdcluster<- makeCluster(no.workers)
   clusterExport(icdcluster, varlist = c("first", "no", "cm"), envir = environment())
@@ -81,23 +80,6 @@ icd10.to.class<- function(icd10vec, no.workers, cm = classification.matrix){
     }
     return(out)
   })
-  # for(i in seq_along(out)){
-  #   if(!any(is.na(c(first, no)))){
-  #     selector<- which(first[i] == classification.matrix$letter  &
-  #                        no[i] >= classification.matrix$start_no & 
-  #                        no[i] <= classification.matrix$end_no)
-  #     if(length(selector)==0){
-  #       out[i]<- 11
-  #     }else if(length(selector)==1){
-  #       out[i]<- classification.matrix$class[selector]
-  #     }else{
-  #       stop(paste("For entry",i, "selector has a length longer than 1."))
-  #     }
-  #   }else{
-  #     out[i]<- NA
-  #   }
-  # }
-  # out[grepl("P81.0", icd10vec)]<- 2
   im<- matrix(unlist(result), ncol = 2, byrow = TRUE)|>
     as.data.frame()
   colnames(im)<- c("k", "class")
@@ -107,9 +89,7 @@ icd10.to.class<- function(icd10vec, no.workers, cm = classification.matrix){
 }
 
 suspicious.Diag.entries<- function(icd10vec, no.workers){
-  #Since the icd10 field is a text field in the GP's software, the data might contain typing errors or atypical notation of diseases. This function returns a vector that filters out whose entries are =1 if they are 'suspicious' and 0 otherwise. An entry is considered suspicious if it does not have a length of 3, 5, or 6 characters. If it has 3, 5, or 6 characters it is suspicious if it does not follow either of the patterns 
-  #1. capital letter, two numbers, capital letter
-  #2. capital letter, two numbers, fullstop, one or two numbers, capital letter
+  # Since the icd10 field is a text field in the GP's software, the data might contain typing errors or atypical notation of diseases. This function returns a vector that filters out whose entries are TRUE if they are 'suspicious' and FALSE otherwise. Several patterns (even 'erroneous' ones) are being tested. The patters that are FALSE are guaranteed to sort correctly into the right disease category using the function icd10.to.class.
   sus.cl<- makeCluster(no.workers)
   clusterExport(sus.cl, varlist = c("icd10vec"), envir = environment())
   result<- parSapply(sus.cl, seq(1, length(icd10vec)), FUN = function(k){
@@ -140,6 +120,7 @@ suspicious.Diag.entries<- function(icd10vec, no.workers){
 }
 
 variable.purger<- function(df, rm.all.PraxisID = FALSE){
+  # Certain variables (index_i, PatID, and PraxisID) in Stamm, Diag, and Konsul are identical. To avoid problems of multiple variables with identical names, these variables can be removed with this function. As we want to retain one copy of PraxisID, an option to retain it, is given, too.
   name.vec<- colnames(df)
   sel<- !(name.vec %in% c("index_i", "PatID"))
   praxis_sel<- which(name.vec == "PraxisID")
@@ -364,23 +345,6 @@ praxisID2location<- function(praxisID){
     sel_2<- praxisID == pid[i]
     out[sel_2]<- lid[i]
   }
-  # l<- length(praxisID)
-  # out<- numeric(length = l)
-  # for(i in seq_along(praxisID)){
-  #   if(praxisID[i]==1 | praxisID[i]==2){
-  #     out[i]<- "baiersbronn"
-  #   }else if(praxisID[i]==3){
-  #     out[i]<- "aalen"
-  #   }else if(praxisID[i]==4){
-  #     out[i]<- "waldachtal"
-  #   }else if(praxisID[i]==5){
-  #     out[i]<- "boeblingen"
-  #   }else if(praxisID[i]==6){
-  #     out[i]<- "schluchsee"
-  #   }else if(praxisID[i]==8){
-  #     out[i]<- "wendlingen"
-  #   }
-  # }
   return(out)
 }
 
@@ -394,23 +358,6 @@ praxisID2location_id<- function(praxisID){
     sel_2<- praxisID == pid[i]
     out[sel_2]<- lid[i]
   }
-  # l<- length(praxisID)
-  # out<- numeric(length = l)
-  # for(i in seq_along(praxisID)){
-  #   if(praxisID[i]==1 | praxisID[i]==2){
-  #     out[i]<- 8237
-  #   }else if(praxisID[i]==3){
-  #     out[i]<- 8136
-  #   }else if(praxisID[i]==4){
-  #     out[i]<- 8237
-  #   }else if(praxisID[i]==5){
-  #     out[i]<- 8115
-  #   }else if(praxisID[i]==6){
-  #     out[i]<- 8315
-  #   }else if(praxisID[i]==8){
-  #     out[i]<- 8116
-  #   }
-  # }
   return(out)
 }
 
@@ -557,11 +504,6 @@ praxis_id2landkreis_id<- function(practiceids){
     sel_2<- practiceids == pid[i]
     out[sel_2]<- lid[i]
   }
-  # practiceids<- as.character(practiceids)
-  # out<- numeric(length(practiceids))
-  # for(i in seq_along(practiceids)){
-  #   out[i]<- location_information$landkreis_id[grepl(practiceids[i],location_information$praxis_ids)]
-  # }
   return(out)
 }
 
