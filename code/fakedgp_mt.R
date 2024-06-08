@@ -33,7 +33,7 @@ art.data<- function(n){
   art.diag<- data.frame(
     uniPatID= sample(ID.levels, n, replace = TRUE),
     TG_DateNum= diag.dates,
-    DiagTyp=sample(c("D","DD"), n, replace = TRUE, prob = c(0.95,0.05)),
+    Typ=sample(c("D","DD"), n, replace = TRUE, prob = c(0.95,0.05)),
     icd10=sample(sample.codes, n, replace = TRUE)
   )
   
@@ -59,12 +59,12 @@ art.data<- function(n){
     TG_Hausbes= NA,
     TG_HausbesMFA= NA,
     TG_HAVertrag= NA,
-    TG_A_Rauchen= sample(c(0,1), n/4, replace = TRUE),
-    TG_RF_Rauchen= sample(c(0,1), n/4, replace = TRUE),
-    TG_A_Alkohol= sample(c(0,1), n/4, replace = TRUE),
-    TG_RF_Alkohol= sample(c(0,1), n/4, replace = TRUE),
-    TG_A_Sport= sample(c(0,1), n/4, replace = TRUE),
-    TG_RF_Sport= sample(c(0,1), n/4, replace = TRUE),
+    A_Rauchen= sample(c(0,1), n/4, replace = TRUE),
+    RF_Rauchen= sample(c(0,1), n/4, replace = TRUE),
+    A_Alkohol= sample(c(0,1), n/4, replace = TRUE),
+    RF_Alkohol= sample(c(0,1), n/4, replace = TRUE),
+    A_Sport= sample(c(0,1), n/4, replace = TRUE),
+    RF_Sport= sample(c(0,1), n/4, replace = TRUE),
     verzogen= NA,
     verstorben= NA
   )
