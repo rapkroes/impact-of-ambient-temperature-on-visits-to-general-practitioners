@@ -195,7 +195,7 @@ workspace.save(make.saves)
 
 ###add daylight data
 full.df_7<- full.df_6
-full.df_7<- add.daylight(full.df_6, no.workers =global.workers)|>
+full.df_7<- add.daylight(full.df_6, no.workers = global.workers)|>
   arrange(TG_DateNum)
 if(make.saves){
   workspace.save(make.saves)

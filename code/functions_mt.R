@@ -635,9 +635,8 @@ add.last.visit<-function(fdf, no.splits, no.workers){
     selector<- df$uniPatID[1:(n - 1)] == df$uniPatID[2:n] & 
       df$diag_class[1:(n - 1)] == df$diag_class[2:n]
     out<- rep(NA, n)
-    for(i in seq(2, n)[selector]){
-      out[i]<- df$TG_DateNum[i] - df$TG_DateNum[i - 1]
-    }
+    sel<- seq(2, n)[selector]
+    out[sel]<- df$TG_DateNum[sel] - df$TG_DateNum[sel - 1]
     return(out)
   })
   
