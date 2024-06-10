@@ -679,8 +679,24 @@ df_qx<- function(inputdf = full.df_7, di, q){
     out$diag_class<- inputdf$diag_class
   }
   
-  # out<- distinct(out)
-  if(q == 2) assign("train_diag_class", out$diag_class - 1, envir = .GlobalEnv)
+  out<- distinct(out)
+  if(q == 2){
+    data.class.vec<- seq(1, 11)
+    assigned.class<- rep(NA, 11)
+    ticker<- 0
+    for(i in data.class.vec){
+      if(i %in% out$diag_class){
+        assigned.class[i]<- ticker
+        out$diag_class[out$diag_class == i]<- ticker
+        ticker<- ticker + 1
+      }
+    }
+    mapping<- cbind(data.class.vec, assigned.class)
+    colnames(mapping)<- c("true_class", "assigned_class")
+    assign("class.mapping", mapping, envir = .GlobalEnv)
+    assign("train_diag_class", out$diag_class, envir = .GlobalEnv)
+    out<- select(out, -diag_class)
+  }
   out<- select(out, -uniPatID)
   return(out)
 }
@@ -1306,7 +1322,7 @@ model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed,
                   "diseases of the digestive system", 
                   "genitourinary disorders", 
                   "musculoskeletal disorders", 
-                  "other diseases and injuries")
+                  "other diseases and injuries")[!is.na(get(class.matrix, envir = .GlobalEnv)["assigned_class"])]
       plot.name<- paste("Effects of", x.name, "on", y.names[l])
       file.name<- paste0(x.name, "_", y.names[l], ".png")
     }else{
