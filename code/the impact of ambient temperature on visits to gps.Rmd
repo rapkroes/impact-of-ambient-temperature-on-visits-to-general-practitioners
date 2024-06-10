@@ -189,8 +189,8 @@ full.df_5$sport<- risk.factor.merger(full.df_5$A_Sport,
 workspace.save(make.saves)
 
 ### add weather variables
-full.df_6<- full.df_5
-full.df_6<- add.weather(full.df_6, no.workers =global.workers)
+full.df_6<- full.df_5[!is.na(full.df_5$PraxisID),] #for all entries except 5 we have Stamm1 data, we remove them in this step.
+full.df_6<- add.weather(full.df_6, no.workers = global.workers)
 workspace.save(make.saves)
 
 ###add daylight data

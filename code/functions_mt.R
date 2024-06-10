@@ -555,7 +555,7 @@ add.daylight<- function(fdf,no.workers){
   ids<- unique(fdf$PraxisID)
   for(i in seq_along(ids)){
     fdl[[i]]<- fdf|>
-      filter(PraxisID==ids[i])
+      filter(PraxisID == ids[i])
     dldl[[i]]<- get(paste0("daylight_", praxisID2location(ids[i])), 
                     envir = .GlobalEnv)
   }
@@ -588,23 +588,35 @@ add.daylight<- function(fdf,no.workers){
 risk.factor.merger<- function(vec_1, vec_2){
   # takes two numeric hot encoded vectors of risk factors and turns them into a single vector of risk factors, using the rules laid out in the paper.
   out<- numeric(length(vec_1))
-  for(i in seq_along(vec_1)){
-    if(vec_1[i]==vec_2[i]){
-      out[i]<- vec_1[i]
-    }else{
-      if((is.na(vec_1[i])& !is.na(vec_2[i]))){
-        out[i]<- vec_1[i]
-      }else if(is.na(vec_2[i])& !is.na(vec_1[i])){
-        out[i]<- vec_2[i]
-      }else{
-        if((vec_1[i]==1 & vec_2[i]==0)|(vec_1[i]==0 & vec_2[i]==1)){
-          out[i]<- 1
-        }else{
-          stop(paste("There is an issue with the values",vec_1[i],"and",vec_2[i]))
-        }
-      }
-    }
-  }
+  one_v1<- vec_1 == 1
+  one_v1[is.na(one_v1)]<- FALSE
+  one_v2<- vec_2 == 1
+  one_v2[is.na(one_v2)]<- FALSE
+  out[one_v1 | one_v2]<- 1
+  
+  # na_1<- is.na(vec_1)
+  # na_2<- is.na(vec_2)
+  # equals<- vec_1 == vec_2
+  # equals[is.na(equals)]<- FALSE
+  # 
+  # for(i in seq_along(vec_1)){
+  #   print(i)
+  #   if(vec_1[i]==vec_2[i]){
+  #     out[i]<- vec_1[i]
+  #   }else{
+  #     if((is.na(vec_1[i])& !is.na(vec_2[i]))){
+  #       out[i]<- vec_1[i]
+  #     }else if(is.na(vec_2[i])& !is.na(vec_1[i])){
+  #       out[i]<- vec_2[i]
+  #     }else{
+  #       if((vec_1[i]==1 & vec_2[i]==0)|(vec_1[i]==0 & vec_2[i]==1)){
+  #         out[i]<- 1
+  #       }else{
+  #         stop(paste("There is an issue with the values",vec_1[i],"and",vec_2[i]))
+  #       }
+  #     }
+  #   }
+  # }
   return(out)
 }
 
@@ -1057,7 +1069,7 @@ ga2performance.eval<- function(ga.list, inputdf, y, est.type, no.trees = 100L,
 }
 
 performance.plots<- function(predicted.var, di, practiceID, galist, y.name, 
-                             y.range, no.threads = 4){
+                             y.range, no.threads = 4, alt.path = TRUE){
   # Creates plots to evaluate the peformance of the estimated models. Works only for research question 1.
   # predicted.var is a string giving the name of the output variable. Can bei either age, gender, phi, or chronic.
   # di is the discomfort index, given as "TDI", "HW", or "SDI"
@@ -1117,6 +1129,11 @@ performance.plots<- function(predicted.var, di, practiceID, galist, y.name,
     quants_3<- c("5pct", "25pct", "50pct", "75pct", "95pct")
     plot.names<- paste0(prefix, " (", quants_2, ")")
     file.names<- paste0(prefix, " ", quants_3, "_", di, ".png")
+    if(isTRUE(alt.path)){
+      for(p in seq_along(file.names)){
+        file.names[i]<- file.path(paste0("N:/StudentischeHilfskraefte/_Kroes (Christoph)/Routinedaten/03_Hitze/R/", file.names[i]))
+      }
+    }
   }else if(predicted.var %in% c("gender", "phi")){
     ref.df<- full.df_7|>
       filter(PraxisID == practiceID)|>
@@ -1160,11 +1177,21 @@ performance.plots<- function(predicted.var, di, practiceID, galist, y.name,
                           ", proportion privately insured")
       file.names<- paste0("Practice ", practiceID, 
                           ", proportion privately insured", "_", di, ".png")
+      if(isTRUE(alt.path)){
+        for(p in seq_along(file.names)){
+          file.names[i]<- file.path(paste0("N:/StudentischeHilfskraefte/_Kroes (Christoph)/Routinedaten/03_Hitze/R/", file.names[i]))
+        }
+      }
     }else{
       plot.names<- paste0("Practice ", practiceID, 
                           ", proportion female patients")
       file.names<- paste0("Practice ", practiceID, 
                           ", proportion female patients", "_", di, ".png")
+      if(isTRUE(alt.path)){
+        for(p in seq_along(file.names)){
+          file.names[i]<- file.path(paste0("N:/StudentischeHilfskraefte/_Kroes (Christoph)/Routinedaten/03_Hitze/R/", file.names[i]))
+        }
+      }
     }
     
   }
