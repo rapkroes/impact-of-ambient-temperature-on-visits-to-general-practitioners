@@ -424,19 +424,13 @@ add.weather<- function(fdf, no.workers){
   }
   dist.env<- environment()
   w.cl<- makeCluster(no.workers)
-  clusterExport(cl = w.cl, varlist = c("fl","twl"), envir = dist.env)
+  clusterExport(cl = w.cl, varlist = c("fl","twl", "left_join"), envir = dist.env)
   
   result<- parLapply(cl = w.cl, seq_along(locations), fun = function(k){
     patient.data<- fl[[k]]
-    dates<- patient.data$TG_DateNum
     weather.data<- twl[[k]]
-    out<- as.data.frame(matrix(NA,nrow = length(dates), ncol = ncol(weather.data)))
-    for(i in seq_along(dates)){
-      out[i,]<- weather.data[which(weather.data$TG_DateNum==dates[i]),]
-    }
-    colnames(out)<- colnames(weather.data)
-    out<- out[,-1]
-    out<- cbind(patient.data,out)
+    out<- left_join(patient.data, weather.data, by = "TG_DateNum")
+    return(out)
   })
   
   out<- result[[1]]
@@ -562,20 +556,22 @@ add.daylight<- function(fdf,no.workers){
   
   dist.env<- environment()
   dayl.cluster<- makeCluster(no.workers)
-  clusterExport(cl = dayl.cluster, varlist = c("fdl","dldl"), envir = dist.env)
+  clusterExport(cl = dayl.cluster, varlist = c("fdl", "dldl", "left_join"), 
+                envir = dist.env)
   result<- parLapply(dayl.cluster,seq_along(ids),fun = function(k){
     base.data<- fdl[[k]]
     daylight.addage<- dldl[[k]]
-    dates<- base.data$TG_DateNum
-    unique.dates<- unique(dates)
-    out<- numeric(length(dates))
-    for(i in seq_along(unique.dates)){
-      selector<- dates==unique.dates[i]
-      out[selector]<- daylight.addage$daylight_hours[daylight.addage$TG_DateNum==unique.dates[i]]
-    }
-    out<- cbind(base.data,out)
-    colnames(out)<- c(colnames(base.data),"daylight_hours")
-    return(out)
+    # dates<- base.data$TG_DateNum
+    # unique.dates<- unique(dates)
+    # out<- numeric(length(dates))
+    # for(i in seq_along(unique.dates)){
+    #   selector<- dates==unique.dates[i]
+    #   out[selector]<- daylight.addage$daylight_hours[daylight.addage$TG_DateNum==unique.dates[i]]
+    # }
+    # out<- cbind(base.data,out)
+    # colnames(out)<- c(colnames(base.data),"daylight_hours")
+    # return(out)
+    return(left_join(base.data, daylight.addage, by = "TG_DateNum"))
   })
   
   out<- result[[1]]
