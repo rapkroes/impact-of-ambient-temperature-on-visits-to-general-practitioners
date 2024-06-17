@@ -160,7 +160,7 @@ TG_DateNum2month<- function(tgdatenumvec){
 
 TG_DateNum2year<- function(tgdatenumvec){
   #takes a vector of TG_DateNum dates and returns them as their respective month as ordered factor variable
-  isoyear(TG_DateNum2date(tgdatenumvec))
+  year(TG_DateNum2date(tgdatenumvec))
 }
 
 date2TG_DateNum<- function(date) {

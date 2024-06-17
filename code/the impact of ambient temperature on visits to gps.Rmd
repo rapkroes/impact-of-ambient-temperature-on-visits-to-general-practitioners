@@ -197,6 +197,11 @@ workspace.save(make.saves)
 full.df_7<- full.df_6
 full.df_7<- add.daylight(full.df_6, no.workers = global.workers)|>
   arrange(TG_DateNum)
+
+###repair data after viewing
+full.df_7$Geburtsjahr[full.df_7$Geburtsjahr == 0]<- NA
+full.df_7$age<- TG_DateNum2year(full.df_7$TG_DateNum) - full.df_7$Geburtsjahr
+
 if(make.saves){
   workspace.save(make.saves)
   write.table(full.df_7, file = file.path("N:/StudentischeHilfskraefte/_Kroes (Christoph)/Routinedaten/03_Hitze/R/final_df.csv"), row.names = FALSE)
