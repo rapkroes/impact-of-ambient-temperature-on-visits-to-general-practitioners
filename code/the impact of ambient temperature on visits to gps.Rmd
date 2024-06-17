@@ -201,12 +201,24 @@ full.df_7<- add.daylight(full.df_6, no.workers = global.workers)|>
 ###repair data after viewing
 full.df_7$Geburtsjahr[full.df_7$Geburtsjahr == 0]<- NA
 full.df_7$age<- TG_DateNum2year(full.df_7$TG_DateNum) - full.df_7$Geburtsjahr
+# remove 2780 observations of people aged 100 and above, and 103 observations of ages less than 0.
+full.df_7<- filter(full.df_7, age <= 100, age >= 0) 
 
 if(make.saves){
   workspace.save(make.saves)
   write.table(full.df_7, file = file.path("N:/StudentischeHilfskraefte/_Kroes (Christoph)/Routinedaten/03_Hitze/R/final_df.csv"), row.names = FALSE)
 }
 
+```
+```{r}
+#Workspace clearing: remove 
+rm.list_1<- ls()[grepl("daylight_", ls()) | grepl("transformed_weather_", ls())]
+rm.list_2<- ls()[grepl("Diag", ls()) | grepl("Stamm", ls()) | 
+                   grepl("Konsul", ls())]
+rm.list_3<- ls()[grepl("full.df_", ls())]
+rm.list_3<- rm.list_3[rm.list_3 != "full.df_7"]
+rm(list = c(rm.list_1, rm.list_2, rm.list_3))
+workspace.save(TRUE)
 ```
 Table 1 (descriptive statistics):
 ```{r}
@@ -306,7 +318,6 @@ hyperpars_age<- genetic.algorithm(optim.seed = 4567, n = 50,
                                   no_threads = global.workers, 
                                   early_stopping = 10L)
 workspace.save(make.saves)
-#add a later increase in number of significant digits
 
 hyperpars_gender<- genetic.algorithm(optim.seed = 4567, n = 50,
                                      pcrossover = 0.8, pmutation = 0.1,
