@@ -302,34 +302,39 @@ write.table(table_1, file = file.path("N:/StudentischeHilfskraefte/_Kroes (Chris
 Research Question 1:
 ```{r}
 #Hyperparameter tuning
-hyperpars_age<- genetic.algorithm(optim.seed = 4567, n = 50,
-                                  pcrossover = 0.8, pmutation = 0.1,
-                                  maxiter = 3, elitism = 4, digits = c(2,3,3),
-                                  sdi = TRUE, lr = c(0,1), 
-                                  no.leaves = c(2,40), max.depth = c(1,10),
-                                  min.data.in.leaf = c(2,1e7), 
-                                  feature.fraction = c(0,1), cat.l2 = c(0,99),
-                                  extra.trees = c(0,1), top.rate = c(0,0.5),
-                                  other.rate = c(0,0.5), cat.smooth = c(0,99),
-                                  path.smooth = c(0,99),
-                                  inputdf = df_qx(di = "SDI", q = 1),
-                                  y = full.df_7$age, est_type = "quantile",
-                                  alpha = 0.5, cv = 2L, no_trees = 100L,
+
+it<- 30
+dg<- rep(3, it)
+
+hyperpars_age<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8, 
+                                  pmutation = 0.1, maxiter = it, elitism = 4, 
+                                  digits = dg, sdi = TRUE, lr = c(0,1), 
+                                  no.leaves = c(2, 40), max.depth = c(1, 10), 
+                                  min.data.in.leaf = c(2, 1e7), 
+                                  feature.fraction = c(0, 1), cat.l2 = c(0, 99), 
+                                  extra.trees = c(0, 1), top.rate = c(0, 0.5), 
+                                  other.rate = c(0, 0.5), cat.smooth = c(0, 99), 
+                                  path.smooth = c(0, 99), 
+                                  inputdf = df_qx(di = "SDI", q = 1), 
+                                  y = full.df_7$age, est_type = "quantile", 
+                                  alpha = 0.5, cv = 2L, no_trees = 100L, 
                                   no_threads = global.workers, 
                                   early_stopping = 10L)
 workspace.save(make.saves)
 
-hyperpars_gender<- genetic.algorithm(optim.seed = 4567, n = 50,
-                                     pcrossover = 0.8, pmutation = 0.1,
-                                     maxiter = 3, elitism = 4, digits = c(2,3,3),
-                                     sdi = TRUE, lr = c(0,1), 
-                                     no.leaves = c(2,40), max.depth = c(1,10),
-                                     min.data.in.leaf = c(2,1e7), 
-                                     feature.fraction = c(0,1), cat.l2 = c(0,99),
-                                     extra.trees = c(0,1), top.rate = c(0,0.5),
-                                     other.rate = c(0,0.5), cat.smooth = c(0,99),
-                                     path.smooth = c(0,99),
-                                     inputdf = df_qx(di = "SDI", q = 1),
+hyperpars_gender<- genetic.algorithm(optim.seed = 4567, n = 50, 
+                                     pcrossover = 0.8, pmutation = 0.1, 
+                                     maxiter = it, elitism = 4, digits = dg, 
+                                     sdi = TRUE, lr = c(0, 1), 
+                                     no.leaves = c(2, 40), max.depth = c(1, 10), 
+                                     min.data.in.leaf = c(2, 1e7), 
+                                     feature.fraction = c(0, 1), 
+                                     cat.l2 = c(0, 99), extra.trees = c(0, 1), 
+                                     top.rate = c(0, 0.5), 
+                                     other.rate = c(0, 0.5), 
+                                     cat.smooth = c(0, 99), 
+                                     path.smooth = c(0, 99), 
+                                     inputdf = df_qx(di = "SDI", q = 1), 
                                      y = full.df_7$female, 
                                      est_type = "cross_entropy", alpha = 0.5, 
                                      cv = 2L, no_trees = 100L, 
@@ -337,32 +342,34 @@ hyperpars_gender<- genetic.algorithm(optim.seed = 4567, n = 50,
                                      early_stopping = 10L)
 workspace.save(make.saves)
 
-hyperpars_phi<- genetic.algorithm(optim.seed = 4567, n = 50,
-                                  pcrossover = 0.8, pmutation = 0.1,
-                                  maxiter = 3, elitism = 4, digits = c(2,3,3),
-                                  sdi = TRUE, lr = c(0,1), 
-                                  no.leaves = c(2,40), max.depth = c(1,10),
-                                  min.data.in.leaf = c(2,1e7), 
-                                  feature.fraction = c(0,1), cat.l2 = c(0,99),
-                                  extra.trees = c(0,1), top.rate = c(0,0.5),
-                                  other.rate = c(0,0.5), cat.smooth = c(0,99),
-                                  path.smooth = c(0,99),
+hyperpars_phi<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8, 
+                                  pmutation = 0.1, maxiter = it, elitism = 4, 
+                                  digits = dg, sdi = TRUE, lr = c(0, 1), 
+                                  no.leaves = c(2, 40), max.depth = c(1, 10),
+                                  min.data.in.leaf = c(2, 1e7), 
+                                  feature.fraction = c(0, 1), cat.l2 = c(0, 99),
+                                  extra.trees = c(0, 1), top.rate = c(0, 0.5),
+                                  other.rate = c(0, 0.5), cat.smooth = c(0, 99),
+                                  path.smooth = c(0, 99),
                                   inputdf = df_qx(di = "SDI", q = 1),
                                   y = full.df_7$PKV, est_type = "cross_entropy",
                                   alpha = 0.5, cv = 2L, no_trees = 100L,
                                   no_threads = global.workers, early_stopping = 10)
 workspace.save(make.saves)
 
-hyperpars_chronic<- genetic.algorithm(optim.seed = 4567, n = 50,
+hyperpars_chronic<- genetic.algorithm(optim.seed = 4567, n = 50, 
                                       pcrossover = 0.8, pmutation = 0.1, 
-                                      maxiter = 3, elitism = 4, digits = c(2,3,3),
-                                      sdi = TRUE, lr = c(0,1), 
-                                      no.leaves = c(2,40), max.depth = c(1,10),
-                                      min.data.in.leaf = c(2,1e7),
-                                      feature.fraction = c(0,1), cat.l2 = c(0,99),
-                                      extra.trees = c(0,1), top.rate = c(0,0.5),
-                                      other.rate = c(0,0.5), cat.smooth = c(0,99),
-                                      path.smooth = c(0,99),
+                                      maxiter = it, elitism = 4, digits = dg,
+                                      sdi = TRUE, lr = c(0, 1), 
+                                      no.leaves = c(2, 40), 
+                                      max.depth = c(1, 10),
+                                      min.data.in.leaf = c(2, 1e7),
+                                      feature.fraction = c(0, 1), 
+                                      cat.l2 = c(0, 99), extra.trees = c(0, 1), 
+                                      top.rate = c(0, 0.5), 
+                                      other.rate = c(0, 0.5), 
+                                      cat.smooth = c(0, 99), 
+                                      path.smooth = c(0, 99),
                                       inputdf = df_qx(di = "SDI", q = 1),
                                       y = full.df_7$no_all_chronic_diseases, 
                                       est_type = "quantile", alpha = 0.5, cv = 2L,
@@ -412,9 +419,9 @@ for(di in c("TDI", "HW", "SDI")){
         if(di == "SDI"){
           processed.hyp<- unlist(hyp$best_in_class[,12:21])
           if(model.ind == 1){
-            y.range<- 80
+            y.range<- 100
           }else{
-            y.range<- 15
+            y.range<- 30
           }
           for(x.ind in seq_along(x.list)){
             model.eval(booster = get(model.name), DI = di, sdi = processed.hyp,
@@ -452,30 +459,36 @@ for(di in c("TDI", "HW", "SDI")){
     }
   }
 }
-performance.plots("age", di = "SDI", practiceID = 6, galist = hyperpars_age,
-                  y.name = "age", y.range = c(0, 80))
-performance.plots("gender", di = "SDI", practiceID = 6, 
-                  galist = hyperpars_gender, y.name = "proportion female", 
-                  y.range = c(0, 1))
-performance.plots("phi", di = "SDI", practiceID = 6, galist = hyperpars_phi,
-                  y.name = "proportion privately insured", y.range = c(0, 1))
-performance.plots("chronic", di = "SDI", practiceID = 6, hyperpars_chronic,
-                  y.name = "number of chronic diseases", y.range = c(0, 20))
+practice.ids<- unique(full.df_7$PraxisID)
+for(i in practice.ids){
+  performance.plots("age", di = "SDI", practiceID = i, galist = hyperpars_age,
+                    y.name = "age", y.range = c(0, 100))
+  performance.plots("gender", di = "SDI", practiceID = i, 
+                    galist = hyperpars_gender, y.name = "proportion female", 
+                    y.range = c(0, 1))
+  performance.plots("phi", di = "SDI", practiceID = i, galist = hyperpars_phi,
+                    y.name = "proportion privately insured", y.range = c(0, 1))
+  performance.plots("chronic", di = "SDI", practiceID = i, hyperpars_chronic,
+                    y.name = "number of chronic diseases", y.range = c(0, 30))
+}
+workspace.save(make.saves)
 
 ```
 Research question 2:
 ```{r}
 #Hyperparameter tuning
+it<- 30
+dg<- rep(3, it)
 q2_SDI<- df_qx(di = "SDI", q = 2)
 hyperpars_q2<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8, 
-                                 pmutation = 0.1, maxiter = 3, elitism = 4, 
-                                 digits = c(2,3,3), sdi = TRUE, lr = c(0,1), 
-                                 no.leaves = c(2,40), max.depth = c(1,10), 
-                                 min.data.in.leaf = c(2,1e7), 
-                                 feature.fraction = c(0,1), cat.l2 = c(0,99), 
-                                 extra.trees = c(0,1), top.rate = c(0,0.5), 
-                                 other.rate = c(0,0.5), cat.smooth = c(0,99), 
-                                 path.smooth = c(0,99),
+                                 pmutation = 0.1, maxiter = it, elitism = 4, 
+                                 digits = dg, sdi = TRUE, lr = c(0, 1), 
+                                 no.leaves = c(2,40), max.depth = c(1, 10), 
+                                 min.data.in.leaf = c(2, 1e7), 
+                                 feature.fraction = c(0, 1), cat.l2 = c(0, 99), 
+                                 extra.trees = c(0, 1), top.rate = c(0, 0.5), 
+                                 other.rate = c(0, 0.5), cat.smooth = c(0, 99), 
+                                 path.smooth = c(0, 99),
                                  inputdf = df_qx(di = "SDI", q = 2),
                                  y = train_diag_class, 
                                  est_type = "multiclass", cv = 2L, 

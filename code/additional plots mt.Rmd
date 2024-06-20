@@ -190,3 +190,14 @@ tdi.vis.df<- data.frame(TDI = tdi.vec, RH = order(rep(rh.vec, length(t.vec))),
 persp(x = tdi.vis.df$T, y = tdi.vis.df$RH, z = tdi.vis.df$TDI)
 ```
 
+```{r}
+# hyperparameter visualisation
+hyper.vis<- function(hyp.element){
+  params<- hyp.element$best_in_class
+  sdi.params<- c(params$no.lags, params$sdi.alpha, params$sdi.beta,
+                 params$theta_1, params$theta_2, params$theta_3, params$rho_1,
+                 params$rho_2, params$rho_3, params$tau)
+  
+}
+```
+
