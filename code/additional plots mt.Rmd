@@ -199,5 +199,53 @@ hyper.vis<- function(hyp.element){
                  params$rho_2, params$rho_3, params$tau)
   
 }
+
+library(ggplot2)
+sdi.vis_w<- function(hyp.vec, hyp.name){
+  #weights
+  lag<- seq(1, hyp.vec[1])
+  omega<- dbetabinom.ab(x = lag, size = hyp.vec[1], shape1 = 
+                          hyp.vec[2], shape2 = hyp.vec[3])
+  wdf<- data.frame(lag = 0:21, omega = c(omega, rep(0, 22 - hyp.vec[1])))
+  wp<- ggplot(data = wdf, aes(x = lag, y = omega)) +
+    geom_line() +
+    labs(title = paste0("Discomfort index weight lags (", hyp.name, ")"),
+         x = "lag no.", y = "weight")
+  ggsave(filename = paste0("weights_", hyp.name, ".png"), device = "png")
+}
+sdi.vis_dd<- function(hyp.vec, hyp.name){
+  browser()
+  #daily discomfort
+  T_Celsius<- seq(-5, 35)
+  T_Kelvin<- T_Celsius + 273.16
+  humidity<- seq(0, 1, by = 0.2)
+  DI.mat<- matrix(NA, nrow = length(T_Celsius), ncol = length(humidity))
+  for(i in seq_along(T_Celsius)){
+    for(j in seq_along(humidity)){
+      t<- T_Kelvin[i]
+      h<- humidity[j]
+      pars<- c(t, t^2, t^3, h, h^2, h^3, t * h)
+      DI.mat[i, j]<- hyp.vec[4:10] %*% pars
+    }
+  }
+  DI.data<- data.frame(T_C = rep(T_Celsius, length(humidity)),
+                       DI = as.vector(DI.mat),
+                       humidity = sort(rep(humidity, length(T_Celsius))))
+  DI.data$DI<- scale(DI.data$DI)
+  plot(DI~T_C, data = DI.data)
+  DIp<- ggplot(data = DI.data, aes(x = T_C, y= DI, col = humidity)) +
+    scale_colour_gradient(low = "blue", high = "red") +
+    geom_point(aes(x = T_C, y= DI, col = humidity)) +
+    
+    labs(title = paste0("Daily discomfort (", hyp.name, ")"), 
+         x = "temperature (°C)", y = "discomfort (standardised)", colour = "humidity")
+  ggsave(filename = paste0("dailydisc_", hyp.name, ".png"), device = "png")
+}
+sdi.vis_dd(sdi.hyp_q2, "research question 2")
+
+sdi.hyp_q2<- c(6, 1.851, 3.149, 0.044, -0.300, 0.187, -0.375, -0.048, -0.270, 
+               0.389)
+
+sdi.vis_w(sdi.hyp_q2, "research question 2")
 ```
 
