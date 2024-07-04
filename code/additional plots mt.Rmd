@@ -214,9 +214,8 @@ sdi.vis_w<- function(hyp.vec, hyp.name){
   ggsave(filename = paste0("weights_", hyp.name, ".png"), device = "png")
 }
 sdi.vis_dd<- function(hyp.vec, hyp.name){
-  browser()
   #daily discomfort
-  T_Celsius<- seq(-5, 35)
+  T_Celsius<- seq(-7, 30)
   T_Kelvin<- T_Celsius + 273.16
   humidity<- seq(0, 1, by = 0.2)
   DI.mat<- matrix(NA, nrow = length(T_Celsius), ncol = length(humidity))

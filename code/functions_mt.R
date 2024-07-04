@@ -1254,7 +1254,7 @@ ga2sdi<- function(galist, inputdf){
 
 model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed, 
                       y.max, y.name, x.factor.names = NA, 
-                      y.label = "proportion", class.mapping = class.mapping){
+                      y.label = "proportion"){
   # simulates data from a booster and a df_qx-created data frame. Returns for each outcome of the 'dependent' variable a plot with evaluation results, dependent on what the booster predicts. The plots are saved to the working directory.
   # booster is a booster, extracted from ga2model
   # DI is the discomfort index, given as "TDI", "HW", or "SDI"
@@ -1303,7 +1303,6 @@ model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed,
                                      newdata = data.matrix(eval.data), 
                                      type = "response"),
                              nrow = nrow(eval.data))
-  browser()
   k<- ncol(prediction.output)
   possible.var.names<- c("thoms_discomfort_index", "PraxisID", "dow",
                          "public_holiday", "school_holiday", "week_of_month",
@@ -1345,7 +1344,7 @@ model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed,
                   "diseases of the digestive system", 
                   "genitourinary disorders", 
                   "musculoskeletal disorders", 
-                  "other diseases and injuries")[!is.na(get(class.matrix, envir = .GlobalEnv)["assigned_class"])]
+                  "other diseases and injuries")
       plot.name<- paste("Effects of", x.name, "on", y.names[l])
       file.name<- paste0(x.name, "_", y.names[l], ".png")
     }else{

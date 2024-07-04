@@ -499,10 +499,10 @@ workspace.save(make.saves)
 model_q2_TDI<- ga2model(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2),
                      y = train_diag_class, est.type = "multiclass",
                      no.trees = 100L, no.threads = global.workers)
-model_q2_HW<- ga2model(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2),
+model_q2_HW<- ga2model(hyperpars_q2, inputdf = df_qx(di = "HW", q = 2),
                      y = train_diag_class, est.type = "multiclass",
                      no.trees = 100L, no.threads = global.workers)
-model_q2_SDI<- ga2model(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2),
+model_q2_SDI<- ga2model(hyperpars_q2, inputdf = df_qx(di = "SDI", q = 2),
                      y = train_diag_class, est.type = "multiclass",
                      no.trees = 100L, no.threads = global.workers)
 
@@ -570,11 +570,11 @@ model.eval(booster = model_q2_TDI, DI = "TDI", Q = 2, no.draws = 100,
 
 model.eval(booster = model_q2_HW, DI = "HW", Q = 2, no.draws = 100, 
            eval.var = "length_heatwave", 
-           eval.seq = seq(min(full.df_7$length_heatwave), 
-                          max(full.df_7$length_heatwave)), 
+           eval.seq = seq(0, 7), 
            seed = sel.seed, y.max = 1)
 
-sdi_q2<- as.vector(as.matrix(hyperpars_q2$best_in_class[,12:21]))
+
+sdi_q2<- unlist(hyperpars_q2$best_in_class[,12:21])
 full.df_7$sdi_q2<- SDI(df = full.df_7, 
                        w = dbetabinom.ab(x = seq(0, sdi_q2[1]), 
                                          size = sdi_q2[1], shape1 = sdi_q2[2], 
@@ -583,8 +583,9 @@ full.df_7$sdi_q2<- SDI(df = full.df_7,
 sdi_q2_range<- range(full.df_7$sdi_q2)
 model.eval(booster = model_q2_SDI, DI = "SDI", sdi = sdi_q2, Q = 2, 
            no.draws = 100, eval.var = "sdi", 
-           eval.seq = seq(sdi_q2_range[1], sdi_q2_range[2], length.out = 500), 
+           eval.seq = seq(3504659, 5182794, length.out = 500), 
            seed = sel.seed, y.max = 1)
+# eval.seq corresponds to -7 to 30 degrees celsius
 
 for(x.ind in seq_along(x.list)){
     model.eval(booster = model_q2_SDI, DI = "SDI", sdi = sdi_q2, Q = 2, 
