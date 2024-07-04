@@ -723,7 +723,7 @@ wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth,
                             error.rate = FALSE){
   # Interior wrapper for cross-validation of the model. Returns the mean of the error estimated for each fold. If cv<=1, instead of cross validation, a model trained on the entire input data is returned (to be precise, a lgbBooster).
   # sdi is FALSE by default. If the suggested discomfort index is to be used, sdi has to be an atomic vector.
-  # if sdi = TRUE:
+  # if sdi != FALSE:
   # sdi[1] number of lags/ size for the weights of sdi
   # sdi[2] alpha/ shape parameter 1 for the weights of sdi
   # sdi[3] beta/ shape parameter 2 for the weights of sdi
@@ -1254,7 +1254,7 @@ ga2sdi<- function(galist, inputdf){
 
 model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed, 
                       y.max, y.name, x.factor.names = NA, 
-                      y.label = "proportion"){
+                      y.label = "proportion", class.mapping = class.mapping){
   # simulates data from a booster and a df_qx-created data frame. Returns for each outcome of the 'dependent' variable a plot with evaluation results, dependent on what the booster predicts. The plots are saved to the working directory.
   # booster is a booster, extracted from ga2model
   # DI is the discomfort index, given as "TDI", "HW", or "SDI"
@@ -1303,6 +1303,7 @@ model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed,
                                      newdata = data.matrix(eval.data), 
                                      type = "response"),
                              nrow = nrow(eval.data))
+  browser()
   k<- ncol(prediction.output)
   possible.var.names<- c("thoms_discomfort_index", "PraxisID", "dow",
                          "public_holiday", "school_holiday", "week_of_month",
