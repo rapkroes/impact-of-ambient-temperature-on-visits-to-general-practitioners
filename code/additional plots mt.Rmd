@@ -236,15 +236,16 @@ sdi.vis_dd<- function(hyp.vec, hyp.name){
     scale_colour_gradient(low = "blue", high = "red") +
     geom_point(aes(x = T_C, y= DI, col = humidity)) +
     
-    labs(title = paste0("Daily discomfort (", hyp.name, ")"), 
+    labs(title = paste0("day-specific discomfort level (", hyp.name, ")"), 
          x = "temperature (°C)", y = "discomfort (standardised)", colour = "humidity")
   ggsave(filename = paste0("dailydisc_", hyp.name, ".png"), device = "png")
 }
-sdi.vis_dd(sdi.hyp_q2, "research question 2")
 
 sdi.hyp_q2<- c(6, 1.851, 3.149, 0.044, -0.300, 0.187, -0.375, -0.048, -0.270, 
                0.389)
-
 sdi.vis_w(sdi.hyp_q2, "research question 2")
+sdi.vis_dd(sdi.hyp_q2, "research question 2")
+
+
 ```
 
