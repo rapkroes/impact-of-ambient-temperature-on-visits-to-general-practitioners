@@ -397,7 +397,9 @@ x.list.factors<- list(PraxisID = NA,
                       school_holiday = c("No", "Yes"), week_of_month = NA, 
                       month = NA, year = NA, daylight_hours = NA, 
                       covid_7_day_incidence = NA)
-for(di in c("TDI", "HW", "SDI")){
+
+# individual models
+for(di in c("SDI", "HW", "TDI")){
   for(model.ind in seq_along(model.list_1)){
     if(model.list_1[[model.ind]] == "quantile"){
       hyp<- get(paste0("hyperpars_", names(model.list_1)[model.ind]))
@@ -410,28 +412,6 @@ for(di in c("TDI", "HW", "SDI")){
                                     alpha = as.numeric(quant),
                                     no.trees = 100L, no.threads = global.workers
                                     ))
-        perf.name<- paste0("perf.", names(model.list_1)[model.ind], quant, "_", 
-                           di)
-        assign(perf.name, ga2performance.eval(hyp, alpha = as.numeric(quant),
-                                              inputdf = df_qx(di = di, q = 1),
-                                              y = model.list_2[[model.ind]],
-                                              est.type = "quantile"))
-        if(di == "SDI"){
-          processed.hyp<- unlist(hyp$best_in_class[,12:21])
-          if(model.ind == 1){
-            y.range<- 100
-          }else{
-            y.range<- 30
-          }
-          for(x.ind in seq_along(x.list)){
-            model.eval(booster = get(model.name), DI = di, sdi = processed.hyp,
-                       Q = 1, no.draws = 100, eval.var = names(x.list)[x.ind],
-                       eval.seq = x.list[[x.ind]], seed = 8181818, 
-                       y.max = y.range, y.name = names(model.list_1)[model.ind],
-                       x.factor.names = x.list.factors[[x.ind]],
-                       y.label = names(model.list_1)[model.ind])
-          }
-        }
       }
     }else{
       model.name<- paste0("model_", names(model.list_1)[model.ind], "_", di)
@@ -441,25 +421,63 @@ for(di in c("TDI", "HW", "SDI")){
                                   est.type = "cross_entropy", 
                                   alpha = as.numeric(quant), no.trees = 100L, 
                                   no.threads = global.workers))
+    }
+  }
+}
+# performance measurement
+for(di in c("SDI", "HW", "TDI")){
+  for(model.ind in seq_along(model.list_1)){
+    if(model.list_1[[model.ind]] == "quantile"){
+      hyp<- get(paste0("hyperpars_", names(model.list_1)[model.ind]))
+      for(quant in c(".05", ".25", ".50", ".75", ".95")){
+        perf.name<- paste0("perf.", names(model.list_1)[model.ind], quant, "_", 
+                           di)
+        assign(perf.name, ga2performance.eval(hyp, alpha = as.numeric(quant),
+                                              inputdf = df_qx(di = di, q = 1),
+                                              y = model.list_2[[model.ind]],
+                                              est.type = "quantile"))
+      }
+    }else{
+      hyp<- get(paste0("hyperpars_", names(model.list_1)[model.ind]))
       perf.name<- paste0("perf.", names(model.list_1)[model.ind], "_", di)
       assign(perf.name, ga2performance.eval(hyp,
                                             inputdf = df_qx(di = di, q = 1),
                                             y = model.list_2[[model.ind]],
                                             est.type = "cross_entropy"))
-      if(di == "SDI"){
-          processed.hyp<- as.vector(as.matrix(hyp$best_in_class[,12:21]))
-          for(x.ind in seq_along(x.list)){
-            model.eval(booster = get(model.name), DI = di, sdi = processed.hyp,
-                       Q = 1, no.draws = 100, eval.var = names(x.list)[x.ind],
-                       eval.seq = x.list[[x.ind]], seed = 8181818, 
-                       y.max = 1, y.name = names(model.list_1)[model.ind],
-                       x.factor.names = x.list.factors[[x.ind]])
-          }
-        }
     }
   }
 }
-practice.ids<- unique(full.df_7$PraxisID)
+# output evaluation plots
+for(model.ind in seq_along(model.list_1)){
+  hyp<- get(paste0("hyperpars_", names(model.list_1)[model.ind]))
+  processed.hyp<- unlist(hyp$best_in_class[,12:21])
+  if(model.list_1[[model.ind]] == "quantile"){
+    for(quant in c(".05", ".25", ".50", ".75", ".95")){
+      y.range<- ifelse(model.ind == 1, 100, 30)
+      for(x.ind in seq_along(x.list)){
+        model.name<- paste0("model_", names(model.list_1)[model.ind], quant, 
+                            "_SDI")
+            model.eval(booster = get(model.name), DI = "SDI", sdi = processed.hyp,
+                       Q = 1, no.draws = 100, eval.var = names(x.list)[x.ind],
+                       eval.seq = x.list[[x.ind]], seed = 8181818, 
+                       y.max = y.range, y.name = names(model.list_1)[model.ind],
+                       x.factor.names = x.list.factors[[x.ind]],
+                       y.label = names(model.list_1)[model.ind])
+      }
+    }
+  }else{
+    for(x.ind in seq_along(x.list)){
+      model.name<- paste0("model_", names(model.list_1)[model.ind], "_", di)
+      model.eval(booster = get(model.name), DI = "SDI", sdi = processed.hyp,
+                 Q = 1, no.draws = 100, eval.var = names(x.list)[x.ind],
+                 eval.seq = x.list[[x.ind]], seed = 8181818, y.max = 1, 
+                 y.name = names(model.list_1)[model.ind], 
+                 x.factor.names = x.list.factors[[x.ind]])
+    }
+  }
+} #model.name??? age quantiles??? 
+#performance plots
+practice.ids<- sort(unique(full.df_7$PraxisID))
 for(i in practice.ids){
   performance.plots("age", di = "SDI", practiceID = i, galist = hyperpars_age,
                     y.name = "age", y.range = c(0, 100))
@@ -477,8 +495,8 @@ workspace.save(make.saves)
 Research question 2:
 ```{r}
 #Hyperparameter tuning
-it<- 30
-dg<- rep(3, it)
+it<- 10
+dg<- rep(5, it)
 q2_SDI<- df_qx(di = "SDI", q = 2)
 hyperpars_q2<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8, 
                                  pmutation = 0.1, maxiter = it, elitism = 4, 
@@ -491,7 +509,7 @@ hyperpars_q2<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8,
                                  path.smooth = c(0, 99),
                                  inputdf = df_qx(di = "SDI", q = 2),
                                  y = train_diag_class, 
-                                 est_type = "multiclass", cv = 2L, 
+                                 est_type = "multiclass", cv = 4L, 
                                  no_trees = 100L, no_threads = global.workers, 
                                  early_stopping = 10L)
 workspace.save(make.saves)
@@ -595,3 +613,5 @@ for(x.ind in seq_along(x.list)){
 }
 
 ```
+
+
