@@ -495,7 +495,7 @@ workspace.save(make.saves)
 Research question 2:
 ```{r}
 #Hyperparameter tuning
-it<- 10
+it<- 30
 dg<- rep(5, it)
 q2_SDI<- df_qx(di = "SDI", q = 2)
 hyperpars_q2<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8, 
@@ -509,10 +509,49 @@ hyperpars_q2<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8,
                                  path.smooth = c(0, 99),
                                  inputdf = df_qx(di = "SDI", q = 2),
                                  y = train_diag_class, 
-                                 est_type = "multiclass", cv = 4L, 
+                                 est_type = "multiclass", cv = 3L, 
                                  no_trees = 100L, no_threads = global.workers, 
                                  early_stopping = 10L)
 workspace.save(make.saves)
+
+# additional tuning
+lr.vec<- 10^(seq(0, -3))
+hyp.tun<- hyperpars_q2
+add.tun.results<- list()
+for(i in seq_along(lr.vec)){
+  hyp.tun$best_in_class[1]<- lr.vec[i]
+  add.tun.results[[i]]<- ga2performance.eval(hyp.tun, 
+                                             inputdf = df_qx(di = "SDI", q = 2),
+                                             y = train_diag_class, 
+                                             est.type = "multiclass", cv = 4)
+}
+
+model.eval_new(model_q2_SDI, DI = "SDI", sdi = sdi_q2, Q = 2, eval.var = "sdi",
+               eval.seq = seq(6353215, 8030782, length.out = 100), 
+               downsample = 0.05, seed = 6181, y.max = 1, y.name = "SDI")
+
+set.seed(616164)
+model_q2_short<- ga2model(hyperpars_q2, inputdf = df_qx(di = "SDI", q = 2)[sample(seq(1, nrow(full.df_7)))],
+                     y = train_diag_class, est.type = "multiclass",
+                     no.trees = 100L, no.threads = global.workers)
+oos.ndf<- df_qx(di = "SDI", q = 2)
+oos.ndf<- oos.ndf[, !(grepl("temperature", colnames(oos.ndf)) | grepl("humidity", colnames(oos.ndf)))]
+oos.ndf$sdi<- full.df_7$sdi_q2
+oos.ndf<- data.matrix(oos.ndf)
+oos<- matrix(predict(object = model_q2_SDI, newdata = oos.ndf, type = "response"), ncol = 11)
+oos.mode.pred<- round(oos) %*% seq(1, 11)
+View(cbind(oos.mode.pred, full.df_7$diag_class))
+
+ndf<- df_qx(di = "TDI", q = 2)
+model_q2_short<- ga2model(hyperpars_q2, inputdf = ndf,
+                     y = train_diag_class, est.type = "multiclass",
+                     no.trees = 100L, no.threads = global.workers)
+oos.ndf<- df_qx(di = "TDI", q = 2)|>
+  data.matrix()
+oos.ndf<- data.matrix(oos.ndf)
+oos<- matrix(predict(object = model_q2_SDI, newdata = oos.ndf, type = "response"), ncol = 11)
+oos.mode.pred<- round(oos) %*% seq(1, 11)
+View(cbind(oos.mode.pred, full.df_7$diag_class))
 
 model_q2_TDI<- ga2model(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2),
                      y = train_diag_class, est.type = "multiclass",
@@ -523,6 +562,8 @@ model_q2_HW<- ga2model(hyperpars_q2, inputdf = df_qx(di = "HW", q = 2),
 model_q2_SDI<- ga2model(hyperpars_q2, inputdf = df_qx(di = "SDI", q = 2),
                      y = train_diag_class, est.type = "multiclass",
                      no.trees = 100L, no.threads = global.workers)
+View(df_qx(di = "SDI", q = 2))
+View(df_qx(di = "TDI", q = 2))
 
 # performance eval
 perf.q2_TDI<- ga2performance.eval(hyperpars_q2, 
@@ -599,6 +640,7 @@ full.df_7$sdi_q2<- SDI(df = full.df_7,
                                          shape2 = sdi_q2[3]),
                        theta = sdi_q2[4:6], rho = sdi_q2[7:9], tau = sdi_q2[10])
 sdi_q2_range<- range(full.df_7$sdi_q2)
+sdi_q2_quantiles<- quantile(full.df_7$sdi_q2, probs = c(0.05, 0.95))
 model.eval(booster = model_q2_SDI, DI = "SDI", sdi = sdi_q2, Q = 2, 
            no.draws = 100, eval.var = "sdi", 
            eval.seq = seq(3504659, 5182794, length.out = 500), 

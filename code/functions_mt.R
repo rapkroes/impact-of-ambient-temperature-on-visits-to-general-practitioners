@@ -678,10 +678,12 @@ df_qx<- function(inputdf = full.df_7, di, q){
     out$sport<- inputdf$sport
     out$last_visit<- inputdf$last_visit
     
-    chronic.selector<- grepl("chronic", colnames(inputdf))
-    addage<- inputdf[,chronic.selector]
-    colnames(addage)<- colnames(inputdf)[chronic.selector]
-    out<- cbind(out, addage)
+    out$no_all_chronic_diseases<- inputdf$no_all_chronic_diseases
+    
+    # chronic.selector<- grepl("chronic", colnames(inputdf))
+    # addage<- inputdf[,chronic.selector]
+    # colnames(addage)<- colnames(inputdf)[chronic.selector]
+    # out<- cbind(out, addage)
     
     out$diag_class<- inputdf$diag_class
   }
@@ -1476,8 +1478,8 @@ model.eval_new<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
                   "genitourinary disorders", 
                   "musculoskeletal disorders", 
                   "other diseases and injuries")
-      plot.name<- paste("Effects of", x.name, "on", y.names[l])
-      file.name<- paste0(x.name, "_", y.names[l], ".png")
+      plot.name<- paste("Effects of", x.name, "on", y.names[i])
+      file.name<- paste0(x.name, "_", y.names[i], ".png")
     }else{
       plot.name<- paste("Effects of", x.name, "on", y.name)
       file.name<- paste0(x.name, "_", y.name, ".png")
@@ -1485,8 +1487,8 @@ model.eval_new<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
     plot_i<- ggplot(data = prepped.data, 
                     aes(x = input, y = outcome, col = quant)) +
       scale_colour_gradient2(low = "red", mid = "blue", high = "red") +
-      coord_cartesian(ylim = c(0, y.max))
-      geom_line() +
+      coord_cartesian(ylim = c(0, y.max)) +
+      geom_point() +
       labs(title = plot.name, x = x.name, y = y.label)
     ggsave(filename = file.name, device = "png")
   }
