@@ -1372,8 +1372,8 @@ model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed,
 }
 
 model.eval_new<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
-                      y.max, y.name, x.factor.names = NA, 
-                      y.label = "proportion"){
+                          inputdf = NA, downsample = 1, seed, y.max, y.name, 
+                          x.factor.names = NA, y.label = "proportion"){
   # calculates and plots quantiles of a booster using a df_qx-created data frame. Returns for each outcome of the 'dependent' variable a plot with evaluation results, dependent on what the booster predicts. The plots are saved to the working directory.
   # booster is a booster, extracted from ga2model
   # DI is the discomfort index, given as "TDI", "HW", or "SDI"
@@ -1386,7 +1386,9 @@ model.eval_new<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
   # y.name is the name of the 'dependent' variable for research question 1. It is used in the naming of the plot and the file that the plot is saved to.
   # x.factor.names is an optional vector of names attached to the numeric values of x. This is especially important for factor variables.
   # y.label is the optional name attached to the y axis of the plot.
-  inputdf<- df_qx(di = DI, q = Q)
+  if(is.na(inputdf)){
+    inputdf<- df_qx(di = DI, q = Q)
+  }
   blacklist<- c("thoms_discomfort_index", "length_heatwave", "sdi", 
                 "daylight_hours", "covid_7_day_incidence", "age", 
                 colnames(inputdf)[grep("chronic", colnames(inputdf))])
@@ -1405,24 +1407,28 @@ model.eval_new<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
     factor.vars<- colnames(inputdf)[!colnames(inputdf) %in% blacklist]
     df<- data.matrix(inputdf)
   }
-  
-  set.seed(seed)
-  initial.data<- df[sample(seq(1, nrow(inputdf)), no.draws, replace = FALSE),]
-  eval.data<- as.data.frame(matrix(NA, nrow = no.draws * length(eval.seq),
-                                   ncol = ncol(df)))
-  colnames(eval.data)<- colnames(df)
-  eval.var.col<- which(colnames(eval.data)==eval.var)
-  for(i in seq_along(eval.seq)){
-    sel.rows<- seq(1, no.draws) + (i - 1) * no.draws
-    eval.data[sel.rows,]<- initial.data
-    eval.data[sel.rows,eval.var.col]<- eval.seq[i]
+  if(downsample < 1){
+    n<- round(downsample * nrow(df))
+    set.seed(seed)
+    df<- df[sample(seq(1, nrow(df)), n, replace = FALSE),]
+  }else{
+    n<- nrow(df)
   }
-  
-  prediction.output<- matrix(predict(object = booster, 
-                                     newdata = data.matrix(eval.data), 
-                                     type = "response"),
-                             nrow = nrow(eval.data))
-  k<- ncol(prediction.output)
+  eval.df<- df
+  eval.var.col<- which(colnames(df) == eval.var)
+  pred.list<- list()
+  for(i in seq_along(eval.seq)){
+    eval.df[,eval.var.col]<- eval.seq[i]
+    pred.list[[i]]<- matrix(predict(object = booster, newdata = eval.df, 
+                             type = "response"), nrow = n)
+  }
+  prediction.output<- do.call(rbind, pred.list) # length(eval.seq) * n by k
+  prepped.data<- matrix(NA, ncol = 3, nrow = 5 * length(eval.seq))|>
+    as.data.frame()
+  prepped.data[,3]<- rep(c(.05, .25, .5, .75, .95), length(eval.seq))
+  prepped.data[,2]<- sort(rep(eval.seq, 5))
+  colnames(prepped.data)<- c("outcome", "input", "quant")
+  library(ggplot2)
   possible.var.names<- c("thoms_discomfort_index", "PraxisID", "dow",
                          "public_holiday", "school_holiday", "week_of_month",
                          "month", "year", "daylight_hours", 
@@ -1451,7 +1457,13 @@ model.eval_new<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
                           "all chronic diseases", "length heatwave", 
                           "suggested discomfort index", "last visit")
   x.name<- possible.xlab.names[eval.var == possible.var.names]
-  for(l in seq(1, k)){
+  k<- ncol(prediction.output)
+  for(i in seq(1, k)){
+    im<- matrix(as.vector(prediction.output[,i]), ncol = length(eval.seq))
+    for(j in seq_along(eval.seq)){
+      sel<- seq(1, 5) + (j - 1) * 5
+      prepped.data[sel, 1]<- quantile(im[,j], probs = c(.05, .25, .5, .75, .95))
+    }
     if(Q == 2){
       y.names<- c("cold-related injuries", 
                   "injuries due to excessive heat", 
@@ -1470,23 +1482,13 @@ model.eval_new<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
       plot.name<- paste("Effects of", x.name, "on", y.name)
       file.name<- paste0(x.name, "_", y.name, ".png")
     }
-    png(file.name)
-    sel<- seq(1, nrow(eval.data), by = no.draws)
-    if(length(x.factor.names)>=2){
-      plot(prediction.output[sel, l]~eval.data[sel, eval.var.col], type = "l", 
-           xlab = x.name, ylab = y.label, main = plot.name, ylim = c(0, y.max),
-           las = 1, xaxt = "n")
-      axis(side = 1, at = eval.seq, labels = x.factor.names)
-    }else{
-      plot(prediction.output[sel, l]~eval.data[sel, eval.var.col], type = "l", 
-           xlab = x.name, ylab = y.label, main = plot.name, ylim = c(0, y.max),
-           las = 1)
-    }
-    for(i in seq(2, no.draws)){
-      sel<- sel + 1
-      lines(x = eval.data[sel, eval.var.col], y = prediction.output[sel, l])
-    }
-    dev.off()
+    plot_i<- ggplot(data = prepped.data, 
+                    aes(x = input, y = outcome, col = quant)) +
+      scale_colour_gradient2(low = "red", mid = "blue", high = "red") +
+      coord_cartesian(ylim = c(0, y.max))
+      geom_line() +
+      labs(title = plot.name, x = x.name, y = y.label)
+    ggsave(filename = file.name, device = "png")
   }
 }
 
