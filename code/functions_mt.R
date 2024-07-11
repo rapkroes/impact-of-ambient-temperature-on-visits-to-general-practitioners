@@ -645,11 +645,15 @@ add.last.visit<-function(fdf, no.splits, no.workers){
   return(out)
 }
 
-df_qx<- function(inputdf = full.df_7, di, q){
+df_qx<- function(inputdf = full.df_7, di, q, save.q1.y = FALSE){
   # creates an input data frame for research question 1 or 2. With customisation for the desired discomfort index.
   # inputdf is the data frame from which the variables are extracted.
   # di is the discomfort index. It is either "TDI" for Thom's discomfort index, "HW" for the length of heatwave, or "SDI" for the suggested discomfort index
   # q specifies the research question- it takes either the value 1L or 2L.
+  if(save.q1.y){
+    di<- "TDI"
+    q<- 2
+  }
   if(di=="TDI"){
     out<- data.frame(thoms_discomfort_index = inputdf$thoms_discomfort_index)
   }else if(di=="HW"){
@@ -668,46 +672,48 @@ df_qx<- function(inputdf = full.df_7, di, q){
   out$year<- inputdf$year
   out$daylight_hours<- inputdf$daylight_hours
   out$covid_7_day_incidence<- inputdf$covid_7_day_incidence
-  
-  if(q==2){
-    out$age<- inputdf$age
-    out$female<- inputdf$female
-    out$PKV<- inputdf$PKV
-    out$smoking<- inputdf$smoking
-    out$alcohol<- inputdf$alcohol
-    out$sport<- inputdf$sport
-    out$last_visit<- inputdf$last_visit
-    
-    out$no_all_chronic_diseases<- inputdf$no_all_chronic_diseases
-    
-    # chronic.selector<- grepl("chronic", colnames(inputdf))
-    # addage<- inputdf[,chronic.selector]
-    # colnames(addage)<- colnames(inputdf)[chronic.selector]
-    # out<- cbind(out, addage)
-    
-    out$diag_class<- inputdf$diag_class
-  }
+
+  out$age<- inputdf$age
+  out$female<- inputdf$female
+  out$PKV<- inputdf$PKV
+  out$smoking<- inputdf$smoking
+  out$alcohol<- inputdf$alcohol
+  out$sport<- inputdf$sport
+  out$last_visit<- inputdf$last_visit
+  out$no_all_chronic_diseases<- inputdf$no_all_chronic_diseases
+  out$diag_class<- inputdf$diag_class
   
   out<- distinct(out)
-  if(q == 2){
-    data.class.vec<- seq(1, 11)
-    assigned.class<- rep(NA, 11)
-    ticker<- 0
-    for(i in data.class.vec){
-      if(i %in% out$diag_class){
-        assigned.class[i]<- ticker
-        out$diag_class[out$diag_class == i]<- ticker
-        ticker<- ticker + 1
+  if(save.q1.y){
+    assign("y.age", out$age, envir = .GlobalEnv)
+    assign("y.gender", out$female, envir = .GlobalEnv)
+    assign("y.phi", out$PKV, envir = .GlobalEnv)
+    assign("y.chronic", out$chronic, envir = .GlobalEnv)
+  }else{
+    if(q == 1){
+      out<- select(out, -age, -female, -PKV, -smoking, -alcohol, -sport, 
+                   -last_visit, -no_all_chronic_diseases, -diag_class)
+    }else if(q == 2){
+      data.class.vec<- seq(1, 11)
+      assigned.class<- rep(NA, 11)
+      ticker<- 0
+      for(i in data.class.vec){
+        if(i %in% out$diag_class){
+          assigned.class[i]<- ticker
+          out$diag_class[out$diag_class == i]<- ticker
+          ticker<- ticker + 1
+        }
       }
+      mapping<- cbind(data.class.vec, assigned.class)
+      colnames(mapping)<- c("true_class", "assigned_class")
+      assign("class.mapping", mapping, envir = .GlobalEnv)
+      assign("train_diag_class", out$diag_class, envir = .GlobalEnv)
+      out<- select(out, -diag_class)
     }
-    mapping<- cbind(data.class.vec, assigned.class)
-    colnames(mapping)<- c("true_class", "assigned_class")
-    assign("class.mapping", mapping, envir = .GlobalEnv)
-    assign("train_diag_class", out$diag_class, envir = .GlobalEnv)
-    out<- select(out, -diag_class)
+    
+    out<- select(out, -uniPatID)
+    return(out)
   }
-  out<- select(out, -uniPatID)
-  return(out)
 }
 
 stoch.round<- function(x){
@@ -1254,128 +1260,9 @@ ga2sdi<- function(galist, inputdf){
   return(out)
 }
 
-model.eval<- function(booster, DI, sdi, Q, no.draws, eval.var, eval.seq, seed, 
-                      y.max, y.name, x.factor.names = NA, 
-                      y.label = "proportion"){
-  # simulates data from a booster and a df_qx-created data frame. Returns for each outcome of the 'dependent' variable a plot with evaluation results, dependent on what the booster predicts. The plots are saved to the working directory.
-  # booster is a booster, extracted from ga2model
-  # DI is the discomfort index, given as "TDI", "HW", or "SDI"
-  # sdi is the vector of SDI hyperparameters iff DI == "SDI"
-  # Q is the numeric research question (either 1 or 2). It is fed into df_qx.
-  # eval.var is the name of the variable that will be varied. In the returned plots, it will be on the x-axis.
-  # eval.seq is the sequence of variables that will be inserted for the evaluated variable.
-  # seed is the random seed.
-  # y.max is the upper limit of the y axis.
-  # y.name is the name of the 'dependent' variable for research question 1. It is used in the naming of the plot and the file that the plot is saved to.
-  # x.factor.names is an optional vector of names attached to the numeric values of x. This is especially important for factor variables.
-  # y.label is the optional name attached to the y axis of the plot.
-  inputdf<- df_qx(di = DI, q = Q)
-  blacklist<- c("thoms_discomfort_index", "length_heatwave", "sdi", 
-                "daylight_hours", "covid_7_day_incidence", "age", 
-                colnames(inputdf)[grep("chronic", colnames(inputdf))])
-  if(DI == "SDI"){
-    sdi.weights<- dbetabinom.ab(x = seq(0,sdi[1]), size = sdi[1],
-                                shape1 = sdi[2], shape2 = sdi[3])
-    sdi.vec<- SDI(df = inputdf, w = sdi.weights, theta = sdi[4:6],
-                  rho = sdi[7:9], tau = sdi[10])
-    
-    col.selector<- grepl("temperature", colnames(inputdf)) | grepl("humidity", colnames(inputdf))
-    df<- inputdf[,!col.selector]
-    df$sdi<- sdi.vec
-    factor.vars<- colnames(df)[!colnames(df) %in% blacklist]
-    df<- data.matrix(df)
-  }else{
-    factor.vars<- colnames(inputdf)[!colnames(inputdf) %in% blacklist]
-    df<- data.matrix(inputdf)
-  }
-  
-  set.seed(seed)
-  initial.data<- df[sample(seq(1, nrow(inputdf)), no.draws, replace = FALSE),]
-  eval.data<- as.data.frame(matrix(NA, nrow = no.draws * length(eval.seq),
-                                   ncol = ncol(df)))
-  colnames(eval.data)<- colnames(df)
-  eval.var.col<- which(colnames(eval.data)==eval.var)
-  for(i in seq_along(eval.seq)){
-    sel.rows<- seq(1, no.draws) + (i - 1) * no.draws
-    eval.data[sel.rows,]<- initial.data
-    eval.data[sel.rows,eval.var.col]<- eval.seq[i]
-  }
-  
-  prediction.output<- matrix(predict(object = booster, 
-                                     newdata = data.matrix(eval.data), 
-                                     type = "response"),
-                             nrow = nrow(eval.data))
-  k<- ncol(prediction.output)
-  possible.var.names<- c("thoms_discomfort_index", "PraxisID", "dow",
-                         "public_holiday", "school_holiday", "week_of_month",
-                         "month", "year", "daylight_hours", 
-                         "covid_7_day_incidence", "age", "female", "PKV",
-                         "smoking", "alcohol", "sport", "chronic_1", 
-                         "chronic_2", "chronic_3", "chronic_4", "chronic_5", 
-                         "chronic_6", "chronic_7", "chronic_8", "chronic_9", 
-                         "chronic_10", "chronic_11", "no_all_chronic_diseases",
-                         "length_heatwave", "sdi", "last_visit")
-  possible.xlab.names<- c("Thom's discomfort index", "practice no.", 
-                          "day of the week", "public holiday", "school holiday",
-                          "week of the month", "month", "year", 
-                          "daylight hours", "Covid-19 7-day-incidence", "age",
-                          "gender", "health insurance", "smoking", "alcohol", 
-                          "sport", "chronic cold-related injuries", 
-                          "chronic injuries due to excessive heat", 
-                          "chronic major cardivascular diseases", 
-                          "chronic major external causes for injury", 
-                          "chronic mental and behavioural disorders", 
-                          "chronic diseases of the respiratory system", 
-                          "chronic endocrine, nutritional, and metabolic disorders", 
-                          "chronic diseases of the digestive system", 
-                          "chronic genitourinary disorders", 
-                          "chronic musculoskeletal disorders", 
-                          "chronic other diseases and injuries", 
-                          "all chronic diseases", "length heatwave", 
-                          "suggested discomfort index", "last visit")
-  x.name<- possible.xlab.names[eval.var == possible.var.names]
-  for(l in seq(1, k)){
-    if(Q == 2){
-      y.names<- c("cold-related injuries", 
-                  "injuries due to excessive heat", 
-                  "major cardivascular diseases", 
-                  "major external causes for injury", 
-                  "mental and behavioural disorders", 
-                  "diseases of the respiratory system", 
-                  "endocrine, nutritional, and metabolic disorders", 
-                  "diseases of the digestive system", 
-                  "genitourinary disorders", 
-                  "musculoskeletal disorders", 
-                  "other diseases and injuries")
-      plot.name<- paste("Effects of", x.name, "on", y.names[l])
-      file.name<- paste0(x.name, "_", y.names[l], ".png")
-    }else{
-      plot.name<- paste("Effects of", x.name, "on", y.name)
-      file.name<- paste0(x.name, "_", y.name, ".png")
-    }
-    png(file.name)
-    sel<- seq(1, nrow(eval.data), by = no.draws)
-    if(length(x.factor.names)>=2){
-      plot(prediction.output[sel, l]~eval.data[sel, eval.var.col], type = "l", 
-           xlab = x.name, ylab = y.label, main = plot.name, ylim = c(0, y.max),
-           las = 1, xaxt = "n")
-      axis(side = 1, at = eval.seq, labels = x.factor.names)
-    }else{
-      plot(prediction.output[sel, l]~eval.data[sel, eval.var.col], type = "l", 
-           xlab = x.name, ylab = y.label, main = plot.name, ylim = c(0, y.max),
-           las = 1)
-    }
-    for(i in seq(2, no.draws)){
-      sel<- sel + 1
-      lines(x = eval.data[sel, eval.var.col], y = prediction.output[sel, l])
-    }
-    dev.off()
-  }
-}
-
-model.eval_new<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
-                          inputdf = NA, downsample = 1, seed, y.max, y.name, 
-                          x.factor.names = NA, y.label = "proportion"){
+model.eval<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
+                      inputdf = NA, downsample = 1, seed, y.max, y.name, 
+                      x.factor.names = NA, y.label = "proportion"){
   # calculates and plots quantiles of a booster using a df_qx-created data frame. Returns for each outcome of the 'dependent' variable a plot with evaluation results, dependent on what the booster predicts. The plots are saved to the working directory.
   # booster is a booster, extracted from ga2model
   # DI is the discomfort index, given as "TDI", "HW", or "SDI"
@@ -1480,9 +1367,18 @@ model.eval_new<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
                   "other diseases and injuries")
       plot.name<- paste("Effects of", x.name, "on", y.names[i])
       file.name<- paste0(x.name, "_", y.names[i], ".png")
+      table.name<- file.name<- paste0(x.name, "_", y.names[i], ".csv")
     }else{
-      plot.name<- paste("Effects of", x.name, "on", y.name)
-      file.name<- paste0(x.name, "_", y.name, ".png")
+      if(!is.na(quant)){
+        plot.name<- paste0("Effects of ", x.name, "on ", y.name, 
+                           " (alpha=", quant, ")")
+        file.name<- paste0(x.name, "_", y.name, "_", quant, ".png")
+        table.name<- paste0(x.name, "_", y.name, "_", quant, ".csv")
+      }else{
+        plot.name<- paste("Effects of", x.name, "on", y.name)
+        file.name<- paste0(x.name, "_", y.name, ".png")
+        table.name<- paste0(x.name, "_", y.name, ".csv")
+      }
     }
     plot_i<- ggplot(data = prepped.data, 
                     aes(x = input, y = outcome, col = quant)) +
@@ -1491,6 +1387,7 @@ model.eval_new<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
       geom_point() +
       labs(title = plot.name, x = x.name, y = y.label)
     ggsave(filename = file.name, device = "png")
+    write.csv(prepped.data, file = table.name, row.names = FALSE)
   }
 }
 

@@ -304,8 +304,9 @@ Research Question 1:
 #Hyperparameter tuning
 
 it<- 30
-dg<- rep(3, it)
+dg<- rep(5, it)
 
+df_qx(save.q1.y = TRUE)
 hyperpars_age<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8, 
                                   pmutation = 0.1, maxiter = it, elitism = 4, 
                                   digits = dg, sdi = TRUE, lr = c(0,1), 
@@ -316,8 +317,8 @@ hyperpars_age<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8,
                                   other.rate = c(0, 0.5), cat.smooth = c(0, 99), 
                                   path.smooth = c(0, 99), 
                                   inputdf = df_qx(di = "SDI", q = 1), 
-                                  y = full.df_7$age, est_type = "quantile", 
-                                  alpha = 0.5, cv = 2L, no_trees = 100L, 
+                                  y = y.age, est_type = "quantile", alpha = 0.5, 
+                                  cv = 2L, no_trees = 100L, 
                                   no_threads = global.workers, 
                                   early_stopping = 10L)
 workspace.save(make.saves)
@@ -335,9 +336,8 @@ hyperpars_gender<- genetic.algorithm(optim.seed = 4567, n = 50,
                                      cat.smooth = c(0, 99), 
                                      path.smooth = c(0, 99), 
                                      inputdf = df_qx(di = "SDI", q = 1), 
-                                     y = full.df_7$female, 
-                                     est_type = "cross_entropy", alpha = 0.5, 
-                                     cv = 2L, no_trees = 100L, 
+                                     y = y.gender, est_type = "cross_entropy", 
+                                     alpha = 0.5, cv = 2L, no_trees = 100L, 
                                      no_threads = global.workers, 
                                      early_stopping = 10L)
 workspace.save(make.saves)
@@ -352,7 +352,7 @@ hyperpars_phi<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8,
                                   other.rate = c(0, 0.5), cat.smooth = c(0, 99),
                                   path.smooth = c(0, 99),
                                   inputdf = df_qx(di = "SDI", q = 1),
-                                  y = full.df_7$PKV, est_type = "cross_entropy",
+                                  y = y.phi, est_type = "cross_entropy",
                                   alpha = 0.5, cv = 2L, no_trees = 100L,
                                   no_threads = global.workers, early_stopping = 10)
 workspace.save(make.saves)
@@ -371,18 +371,16 @@ hyperpars_chronic<- genetic.algorithm(optim.seed = 4567, n = 50,
                                       cat.smooth = c(0, 99), 
                                       path.smooth = c(0, 99),
                                       inputdf = df_qx(di = "SDI", q = 1),
-                                      y = full.df_7$no_all_chronic_diseases, 
-                                      est_type = "quantile", alpha = 0.5, cv = 2L,
-                                      no_trees = 100L, 
+                                      y = y.chronic, est_type = "quantile", 
+                                      alpha = 0.5, cv = 2L, no_trees = 100L, 
                                       no_threads = global.workers, 
                                       early_stopping = 10L)
 workspace.save(make.saves)
 
 model.list_1<- list(age = "quantile", gender = "cross_entropy", 
                     phi = "cross_entropy", chronic = "quantile")
-model.list_2<- list(age = full.df_7$age, gender = full.df_7$female, 
-                    phi = full.df_7$PKV, 
-                    chronic = full.df_7$no_all_chronic_diseases)
+model.list_2<- list(age = y.age, gender = y.gender, phi = y.phi, 
+                    chronic = y.chronic)
 x.list<- list(PraxisID = as.numeric(levels(as.factor(full.df_7$PraxisID))), 
               dow = seq(1,7), public_holiday = c(0, 1), 
               school_holiday = c(0, 1), week_of_month = seq(1, 5), 
@@ -424,6 +422,22 @@ for(di in c("SDI", "HW", "TDI")){
     }
   }
 }
+
+# performance plots
+practice.ids<- sort(unique(full.df_7$PraxisID))
+for(i in practice.ids){
+  performance.plots("age", di = "SDI", practiceID = i, galist = hyperpars_age,
+                    y.name = "age", y.range = c(0, 100))
+  performance.plots("gender", di = "SDI", practiceID = i, 
+                    galist = hyperpars_gender, y.name = "proportion female", 
+                    y.range = c(0, 1))
+  performance.plots("phi", di = "SDI", practiceID = i, galist = hyperpars_phi,
+                    y.name = "proportion privately insured", y.range = c(0, 1))
+  performance.plots("chronic", di = "SDI", practiceID = i, hyperpars_chronic,
+                    y.name = "number of chronic diseases", y.range = c(0, 30))
+}
+workspace.save(make.saves)
+
 # performance measurement
 for(di in c("SDI", "HW", "TDI")){
   for(model.ind in seq_along(model.list_1)){
@@ -447,6 +461,7 @@ for(di in c("SDI", "HW", "TDI")){
     }
   }
 }
+
 # output evaluation plots
 for(model.ind in seq_along(model.list_1)){
   hyp<- get(paste0("hyperpars_", names(model.list_1)[model.ind]))
@@ -457,39 +472,26 @@ for(model.ind in seq_along(model.list_1)){
       for(x.ind in seq_along(x.list)){
         model.name<- paste0("model_", names(model.list_1)[model.ind], quant, 
                             "_SDI")
-            model.eval(booster = get(model.name), DI = "SDI", sdi = processed.hyp,
-                       Q = 1, no.draws = 100, eval.var = names(x.list)[x.ind],
-                       eval.seq = x.list[[x.ind]], seed = 8181818, 
-                       y.max = y.range, y.name = names(model.list_1)[model.ind],
-                       x.factor.names = x.list.factors[[x.ind]],
-                       y.label = names(model.list_1)[model.ind])
+        model.eval(booster = get(model.name), DI = "SDI", sdi = processed.hyp, 
+                   Q = 1, eval.var = names(x.list)[x.ind], 
+                   eval.seq = x.list[[x.ind]], quant = as.numeric(quant), 
+                   y.max = y.range, y.name = names(model.list_1)[model.ind], 
+                   x.factor.names = x.list.factors[[x.ind]], 
+                   y.label = names(model.list_1)[model.ind])
       }
     }
   }else{
     for(x.ind in seq_along(x.list)){
       model.name<- paste0("model_", names(model.list_1)[model.ind], "_", di)
       model.eval(booster = get(model.name), DI = "SDI", sdi = processed.hyp,
-                 Q = 1, no.draws = 100, eval.var = names(x.list)[x.ind],
-                 eval.seq = x.list[[x.ind]], seed = 8181818, y.max = 1, 
+                 Q = 1, eval.var = names(x.list)[x.ind], 
+                 eval.seq = x.list[[x.ind]], y.max = 1, 
                  y.name = names(model.list_1)[model.ind], 
                  x.factor.names = x.list.factors[[x.ind]])
     }
   }
-} #model.name??? age quantiles??? 
-#performance plots
-practice.ids<- sort(unique(full.df_7$PraxisID))
-for(i in practice.ids){
-  performance.plots("age", di = "SDI", practiceID = i, galist = hyperpars_age,
-                    y.name = "age", y.range = c(0, 100))
-  performance.plots("gender", di = "SDI", practiceID = i, 
-                    galist = hyperpars_gender, y.name = "proportion female", 
-                    y.range = c(0, 1))
-  performance.plots("phi", di = "SDI", practiceID = i, galist = hyperpars_phi,
-                    y.name = "proportion privately insured", y.range = c(0, 1))
-  performance.plots("chronic", di = "SDI", practiceID = i, hyperpars_chronic,
-                    y.name = "number of chronic diseases", y.range = c(0, 30))
 }
-workspace.save(make.saves)
+
 
 ```
 Research question 2:
@@ -514,45 +516,7 @@ hyperpars_q2<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8,
                                  early_stopping = 10L)
 workspace.save(make.saves)
 
-# additional tuning
-lr.vec<- 10^(seq(0, -3))
-hyp.tun<- hyperpars_q2
-add.tun.results<- list()
-for(i in seq_along(lr.vec)){
-  hyp.tun$best_in_class[1]<- lr.vec[i]
-  add.tun.results[[i]]<- ga2performance.eval(hyp.tun, 
-                                             inputdf = df_qx(di = "SDI", q = 2),
-                                             y = train_diag_class, 
-                                             est.type = "multiclass", cv = 4)
-}
-
-model.eval_new(model_q2_SDI, DI = "SDI", sdi = sdi_q2, Q = 2, eval.var = "sdi",
-               eval.seq = seq(6353215, 8030782, length.out = 100), 
-               downsample = 0.05, seed = 6181, y.max = 1, y.name = "SDI")
-
-set.seed(616164)
-model_q2_short<- ga2model(hyperpars_q2, inputdf = df_qx(di = "SDI", q = 2)[sample(seq(1, nrow(full.df_7)))],
-                     y = train_diag_class, est.type = "multiclass",
-                     no.trees = 100L, no.threads = global.workers)
-oos.ndf<- df_qx(di = "SDI", q = 2)
-oos.ndf<- oos.ndf[, !(grepl("temperature", colnames(oos.ndf)) | grepl("humidity", colnames(oos.ndf)))]
-oos.ndf$sdi<- full.df_7$sdi_q2
-oos.ndf<- data.matrix(oos.ndf)
-oos<- matrix(predict(object = model_q2_SDI, newdata = oos.ndf, type = "response"), ncol = 11)
-oos.mode.pred<- round(oos) %*% seq(1, 11)
-View(cbind(oos.mode.pred, full.df_7$diag_class))
-
-ndf<- df_qx(di = "TDI", q = 2)
-model_q2_short<- ga2model(hyperpars_q2, inputdf = ndf,
-                     y = train_diag_class, est.type = "multiclass",
-                     no.trees = 100L, no.threads = global.workers)
-oos.ndf<- df_qx(di = "TDI", q = 2)|>
-  data.matrix()
-oos.ndf<- data.matrix(oos.ndf)
-oos<- matrix(predict(object = model_q2_SDI, newdata = oos.ndf, type = "response"), ncol = 11)
-oos.mode.pred<- round(oos) %*% seq(1, 11)
-View(cbind(oos.mode.pred, full.df_7$diag_class))
-
+# models
 model_q2_TDI<- ga2model(hyperpars_q2, inputdf = df_qx(di = "TDI", q = 2),
                      y = train_diag_class, est.type = "multiclass",
                      no.trees = 100L, no.threads = global.workers)
@@ -562,8 +526,6 @@ model_q2_HW<- ga2model(hyperpars_q2, inputdf = df_qx(di = "HW", q = 2),
 model_q2_SDI<- ga2model(hyperpars_q2, inputdf = df_qx(di = "SDI", q = 2),
                      y = train_diag_class, est.type = "multiclass",
                      no.trees = 100L, no.threads = global.workers)
-View(df_qx(di = "SDI", q = 2))
-View(df_qx(di = "TDI", q = 2))
 
 # performance eval
 perf.q2_TDI<- ga2performance.eval(hyperpars_q2, 
@@ -571,19 +533,16 @@ perf.q2_TDI<- ga2performance.eval(hyperpars_q2,
                                   y = train_diag_class, 
                                   est.type = "multiclass", 
                                   cv = 10)
-rq2.performance.plot(model_q2_TDI, di = "TDI", no.draws = 5000, seed = 1261)
 perf.q2_HW<- ga2performance.eval(hyperpars_q2, 
                                  inputdf = df_qx(di = "HW", q = 2),
                                  y = train_diag_class, 
                                  est.type = "multiclass",
                                  cv = 10)
-rq2.performance.plot(model_q2_HW, di = "HW", no.draws = 5000, seed = 1261)
 perf.q2_SDI<- ga2performance.eval(hyperpars_q2, 
                                   inputdf = df_qx(di = "SDI", q = 2),
                                   y = train_diag_class, 
                                   est.type = "multiclass",
                                   cv = 10)
-rq2.performance.plot(model_q2_SDI, di = "SDI", no.draws = 5000, seed = 1261)
 
 # eval of output
 x.list<- list(PraxisID = as.numeric(levels(as.factor(full.df_7$PraxisID))), 
@@ -619,15 +578,15 @@ x.list.factors<- list(PraxisID = NA,
                       chronic_10 = NA, chronic_11 = NA, 
                       no_all_chronic_diseases = NA, last_visit = NA
               )
-sel.seed<- 7518269
-model.eval(booster = model_q2_TDI, DI = "TDI", Q = 2, no.draws = 100, 
+tdi_q2_quantiles<- quantile(full.df_7$thoms_discomfort_index, 
+                            probs = c(0.05, 0.95))
+model.eval(booster = model_q2_TDI, DI = "TDI", Q = 2, 
            eval.var = "thoms_discomfort_index", 
-           eval.seq = seq(min(full.df_7$thoms_discomfort_index), 
-                          max(full.df_7$thoms_discomfort_index), 
-                          length.out = 500), 
-           seed = sel.seed, y.max = 1)
+           eval.seq = seq(tdi_q2_quantiles[1], tdi_q2_quantiles[2], 
+                          length.out = 500),
+           y.max = 1)
 
-model.eval(booster = model_q2_HW, DI = "HW", Q = 2, no.draws = 100, 
+model.eval(booster = model_q2_HW, DI = "HW", Q = 2,
            eval.var = "length_heatwave", 
            eval.seq = seq(0, 7), 
            seed = sel.seed, y.max = 1)
@@ -643,9 +602,9 @@ sdi_q2_range<- range(full.df_7$sdi_q2)
 sdi_q2_quantiles<- quantile(full.df_7$sdi_q2, probs = c(0.05, 0.95))
 model.eval(booster = model_q2_SDI, DI = "SDI", sdi = sdi_q2, Q = 2, 
            no.draws = 100, eval.var = "sdi", 
-           eval.seq = seq(3504659, 5182794, length.out = 500), 
+           eval.seq = seq(sdi_q2_quantiles[1], sdi_q2_quantiles[2], 
+                          length.out = 500), 
            seed = sel.seed, y.max = 1)
-# eval.seq corresponds to -7 to 30 degrees celsius
 
 for(x.ind in seq_along(x.list)){
     model.eval(booster = model_q2_SDI, DI = "SDI", sdi = sdi_q2, Q = 2, 
