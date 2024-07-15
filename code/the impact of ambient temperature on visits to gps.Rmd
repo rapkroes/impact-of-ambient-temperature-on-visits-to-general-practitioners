@@ -498,7 +498,7 @@ Research question 2:
 ```{r}
 #Hyperparameter tuning
 it<- 30
-dg<- rep(5, it)
+dg<- rep(4, it)
 q2_SDI<- df_qx(di = "SDI", q = 2)
 hyperpars_q2<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8, 
                                  pmutation = 0.1, maxiter = it, elitism = 4, 
@@ -586,10 +586,8 @@ model.eval(booster = model_q2_TDI, DI = "TDI", Q = 2,
                           length.out = 500),
            y.max = 1)
 
-model.eval(booster = model_q2_HW, DI = "HW", Q = 2,
-           eval.var = "length_heatwave", 
-           eval.seq = seq(0, 7), 
-           seed = sel.seed, y.max = 1)
+model.eval(booster = model_q2_HW, DI = "HW", Q = 2, 
+           eval.var = "length_heatwave", eval.seq = seq(0, 7), y.max = 1)
 
 
 sdi_q2<- unlist(hyperpars_q2$best_in_class[,12:21])
@@ -601,16 +599,15 @@ full.df_7$sdi_q2<- SDI(df = full.df_7,
 sdi_q2_range<- range(full.df_7$sdi_q2)
 sdi_q2_quantiles<- quantile(full.df_7$sdi_q2, probs = c(0.05, 0.95))
 model.eval(booster = model_q2_SDI, DI = "SDI", sdi = sdi_q2, Q = 2, 
-           no.draws = 100, eval.var = "sdi", 
-           eval.seq = seq(sdi_q2_quantiles[1], sdi_q2_quantiles[2], 
-                          length.out = 500), 
-           seed = sel.seed, y.max = 1)
+           eval.var = "sdi", eval.seq = seq(sdi_q2_quantiles[1], 
+                                            sdi_q2_quantiles[2],
+                                            length.out = 20), 
+           y.max = 1)
 
 for(x.ind in seq_along(x.list)){
     model.eval(booster = model_q2_SDI, DI = "SDI", sdi = sdi_q2, Q = 2, 
-               no.draws = 100, eval.var = names(x.list)[x.ind], 
-               eval.seq = x.list[[x.ind]], seed = sel.seed, y.max = 1, 
-               x.factor.names = x.list.factors[[x.ind]])
+               eval.var = names(x.list)[x.ind], eval.seq = x.list[[x.ind]], 
+               y.max = 1, x.factor.names = x.list.factors[[x.ind]])
 }
 
 ```

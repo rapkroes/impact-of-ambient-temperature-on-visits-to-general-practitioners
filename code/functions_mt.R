@@ -1367,7 +1367,7 @@ model.eval<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
                   "other diseases and injuries")
       plot.name<- paste("Effects of", x.name, "on", y.names[i])
       file.name<- paste0(x.name, "_", y.names[i], ".png")
-      table.name<- file.name<- paste0(x.name, "_", y.names[i], ".csv")
+      table.name<- paste0(x.name, "_", y.names[i], ".csv")
     }else{
       if(!is.na(quant)){
         plot.name<- paste0("Effects of ", x.name, "on ", y.name, 
@@ -1381,11 +1381,15 @@ model.eval<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
       }
     }
     plot_i<- ggplot(data = prepped.data, 
-                    aes(x = input, y = outcome, col = quant)) +
-      scale_colour_gradient2(low = "red", mid = "blue", high = "red") +
+                    aes(x = input, y = outcome, col = as.factor(quant))) +
       coord_cartesian(ylim = c(0, y.max)) +
-      geom_point() +
-      labs(title = plot.name, x = x.name, y = y.label)
+      geom_line() +
+      labs(title = plot.name, x = x.name, y = y.label) +
+      scale_colour_manual(values = c("0.05" = "red", "0.25" = "blue", 
+                                     "0.5" = "black", "0.75" = "blue",
+                                     "0.95" = "red")) +
+      labs(colour = "quantile") +
+      theme(legend.position = "bottom")
     ggsave(filename = file.name, device = "png")
     write.csv(prepped.data, file = table.name, row.names = FALSE)
   }
