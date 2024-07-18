@@ -680,8 +680,10 @@ df_qx<- function(inputdf = full.df_7, di, q, save.q1.y = FALSE){
   out$alcohol<- inputdf$alcohol
   out$sport<- inputdf$sport
   out$last_visit<- inputdf$last_visit
-  out$no_all_chronic_diseases<- inputdf$no_all_chronic_diseases
   out$diag_class<- inputdf$diag_class
+  
+  addage<- inputdf[, grepl("chronic", colnames(inputdf))]
+  out<- cbind(addage, out)
   
   out<- distinct(out)
   if(save.q1.y){
@@ -691,8 +693,9 @@ df_qx<- function(inputdf = full.df_7, di, q, save.q1.y = FALSE){
     assign("y.chronic", out$chronic, envir = .GlobalEnv)
   }else{
     if(q == 1){
-      out<- select(out, -age, -female, -PKV, -smoking, -alcohol, -sport, 
-                   -last_visit, -no_all_chronic_diseases, -diag_class)
+      out<- out|>
+        select(-age, -female, -PKV, -smoking, -alcohol, -sport, -last_visit, 
+               -no_all_chronic_diseases, -diag_class, -starts_with("chronic"))
     }else if(q == 2){
       data.class.vec<- seq(1, 11)
       assigned.class<- rep(NA, 11)
@@ -724,7 +727,7 @@ stoch.round<- function(x){
 wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth, 
                             min.data.in.leaf, feature.fraction, cat.l2,
                             extra.trees = FALSE, top.rate, other.rate,
-                            cat.smooth, path.smooth,
+                            cat.smooth, path.smooth, constraints = TRUE,
                             inputdf, y, est.type, alpha = 0.5, cv = 5L,
                             no.trees = 100L, no.threads = 4L, 
                             early.stopping = 10L, seed = NA, 
@@ -801,6 +804,21 @@ wrapper_interior<- function(sdi = FALSE, lr, no.leaves, max.depth,
                     other_rate = other.rate, cat_l2 = cat.l2, 
                     cat_smooth = cat.smooth, path_smooth = path.smooth,
                     alpha = alpha)
+  if(isTRUE(constraints)){
+    if(any(colnames(inputdf) == "no_all_chronic_diseases")){
+      parameters[["interaction_constraints"]]<- list(
+        c("no_all_chronic_diseases", "dow", "public_holiday", "school_holiday", 
+          "week_of_month", "month", "year", "daylight_hours", 
+          "covid_7_day_incidence")
+      )
+    }else{
+      parameters[["interaction_constraints"]]<- list(
+        c("dow", "public_holiday", "school_holiday", "week_of_month", "month", 
+          "year", "daylight_hours", "covid_7_day_incidence")
+      )
+    }
+    
+  }
   if(est.type == "binary"){
     eval.metric<- list()
     eval.metric[[1]]<- lossfct
@@ -1003,13 +1021,13 @@ sdi.sampler<- function(i, no.samples, sdi_init){
   }
 }
 
-ga2model<- function(ga.list, inputdf, y, est.type, alpha = 0.5,
-                    no.trees = 100L, no.threads = 4L, seed = NA){
+ga2model<- function(ga.list, inputdf, y, est.type, alpha = 0.5, no.trees = 100L, 
+                    no.threads = 4L, constraints = FALSE, seed = NA){
   # trains the best model specified by the "genetic.algorithm" function. It is based on wrapper_interior, similar to genetic.algorithm.
   # ga.list is an output list extracted from the function "genetic.algorithm".
   # other parameters are equal to wrapper_interior parameters.
   params<- ga.list$best_in_class
-  if(colnames(inputdf)[1] %in% c("thoms_discomfort_index", "length_heatwave")){
+  if(any(colnames(inputdf) %in% c("thoms_discomfort_index", "length_heatwave"))){
     sdi.params<- FALSE
   }else{
     sdi.params<- c(params$no.lags, params$sdi.alpha, params$sdi.beta, 
@@ -1027,16 +1045,16 @@ ga2model<- function(ga.list, inputdf, y, est.type, alpha = 0.5,
                          top.rate = params$top.rate, 
                          other.rate = params$other.rate, 
                          cat.smooth = params$cat.smooth, 
-                         path.smooth = params$path.smooth,
-                         inputdf = inputdf, y = y, est.type = est.type, 
-                         alpha = alpha, cv = 1L, no.trees = no.trees, 
-                         no.threads = no.threads)
+                         path.smooth = params$path.smooth, 
+                         constraints = constraints, inputdf = inputdf, y = y, 
+                         est.type = est.type, alpha = alpha, cv = 1L, 
+                         no.trees = no.trees, no.threads = no.threads)
   return(out)
 }
 
 ga2performance.eval<- function(ga.list, inputdf, y, est.type, no.trees = 100L,
-                               alpha = 0.5, no.threads = 4L, seed = NA, 
-                               cv = 10){
+                               alpha = 0.5, no.threads = 4L, constraints = FALSE,
+                               seed = NA, cv = 10){
   # Measures the performance of the best model specified by the "genetic.algorithm" function.
   # ga.list is an output list extracted from the function "genetic.algorithm".
   # other parameters are equal to wrapper_interior parameters.
@@ -1064,10 +1082,11 @@ ga2performance.eval<- function(ga.list, inputdf, y, est.type, no.trees = 100L,
                          top.rate = params$top.rate, 
                          other.rate = params$other.rate, 
                          cat.smooth = params$cat.smooth, 
-                         path.smooth = params$path.smooth,
-                         inputdf = inputdf, y = y, est.type = est.type, 
-                         alpha = alpha, cv = cv, no.trees = no.trees, 
-                         no.threads = no.threads, error.rate = error_rate)
+                         path.smooth = params$path.smooth, 
+                         constraints = constraints, inputdf = inputdf, y = y, 
+                         est.type = est.type, alpha = alpha, cv = cv, 
+                         no.trees = no.trees, no.threads = no.threads, 
+                         error.rate = error_rate)
   return(out)
 }
 
@@ -1370,13 +1389,13 @@ model.eval<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
       table.name<- paste0(x.name, "_", y.names[i], ".csv")
     }else{
       if(!is.na(quant)){
-        plot.name<- paste0("Effects of ", x.name, "on ", y.name, 
+        plot.name<- paste0("Effects of ", x.name, " on ", y.name, 
                            " (alpha=", quant, ")")
         file.name<- paste0(x.name, "_", y.name, "_", quant, ".png")
         table.name<- paste0(x.name, "_", y.name, "_", quant, ".csv")
       }else{
         plot.name<- paste("Effects of", x.name, "on", y.name)
-        file.name<- paste0(x.name, "_", y.name, ".png")
+        file.name<- paste0("Q", Q, x.name, "_", y.name, ".png")
         table.name<- paste0(x.name, "_", y.name, ".csv")
       }
     }
@@ -1390,7 +1409,24 @@ model.eval<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
                                      "0.95" = "red")) +
       labs(colour = "quantile") +
       theme(legend.position = "bottom")
+    # if(eval.var == "month"){
+    #   plot_i<- plot_i +
+    #     scale_x_continuous(breaks = seq(1, 12))
+    # }else if(eval.var %in% c("PraxisID", "public_holiday", "school_holiday")){
+    #   plot_i<- ggplot(data = prepped.data, 
+    #                   aes(x = input, y = outcome, col = as.factor(quant))) +
+    #     coord_cartesian(ylim = c(0, y.max)) +
+    #     geom_point() +
+    #     labs(title = plot.name, x = x.name, y = y.label) +
+    #     scale_colour_manual(values = c("0.05" = "red", "0.25" = "blue", 
+    #                                    "0.5" = "black", "0.75" = "blue",
+    #                                    "0.95" = "red")) +
+    #     labs(colour = "quantile") +
+    #     theme(legend.position = "bottom") +
+    #     scale_x_discrete()
+    # }
     ggsave(filename = file.name, device = "png")
+    assign(table.name, prepped.data, envir = .GlobalEnv)
     write.csv(prepped.data, file = table.name, row.names = FALSE)
   }
 }

@@ -304,7 +304,7 @@ Research Question 1:
 #Hyperparameter tuning
 
 it<- 30
-dg<- rep(5, it)
+dg<- rep(4, it)
 
 df_qx(save.q1.y = TRUE)
 hyperpars_age<- genetic.algorithm(optim.seed = 4567, n = 50, pcrossover = 0.8, 
@@ -549,17 +549,17 @@ x.list<- list(PraxisID = as.numeric(levels(as.factor(full.df_7$PraxisID))),
               dow = seq(1,7), public_holiday = c(0, 1), 
               school_holiday = c(0, 1), week_of_month = seq(1, 5), 
               month = seq(1, 12), 
-              year = seq(TG_DateNum2year(date.range[1]), 
+              year = seq(TG_DateNum2year(date.range[1]),
                          TG_DateNum2year(date.range[2])),
-              daylight_hours = seq(0.35, 0.65, by = 0.1), 
-              covid_7_day_incidence = seq(0, 2500, length.out = 100), 
-              age = seq(18, 70), female = c(0, 1), PKV = c(0, 1), 
-              smoking = c(0, 1), alcohol = c(0, 1), sport = c(0, 1), 
-              chronic_1 = seq(0, 10), chronic_2 = seq(0, 10), 
-              chronic_3 = seq(0, 10), chronic_4 = seq(0, 10), 
-              chronic_5 = seq(0, 10), chronic_6 = seq(0, 10), 
-              chronic_7 = seq(0, 10), chronic_8 = seq(0, 10), 
-              chronic_9 = seq(0, 10), chronic_10 = seq(0, 10), 
+              daylight_hours = seq(0.35, 0.65, by = 0.1),
+              covid_7_day_incidence = seq(0, 2500, length.out = 100),
+              age = seq(18, 70), female = c(0, 1), PKV = c(0, 1),
+              smoking = c(0, 1), alcohol = c(0, 1), sport = c(0, 1),
+              chronic_1 = seq(0, 10), chronic_2 = seq(0, 10),
+              chronic_3 = seq(0, 10), chronic_4 = seq(0, 10),
+              chronic_5 = seq(0, 10), chronic_6 = seq(0, 10),
+              chronic_7 = seq(0, 10), chronic_8 = seq(0, 10),
+              chronic_9 = seq(0, 10), chronic_10 = seq(0, 10),
               chronic_11 = seq(0, 10), no_all_chronic_diseases = seq(0, 20),
               last_visit = seq(1, 56)
               )
@@ -583,7 +583,7 @@ tdi_q2_quantiles<- quantile(full.df_7$thoms_discomfort_index,
 model.eval(booster = model_q2_TDI, DI = "TDI", Q = 2, 
            eval.var = "thoms_discomfort_index", 
            eval.seq = seq(tdi_q2_quantiles[1], tdi_q2_quantiles[2], 
-                          length.out = 500),
+                          length.out = 10),
            y.max = 1)
 
 model.eval(booster = model_q2_HW, DI = "HW", Q = 2, 
@@ -601,7 +601,7 @@ sdi_q2_quantiles<- quantile(full.df_7$sdi_q2, probs = c(0.05, 0.95))
 model.eval(booster = model_q2_SDI, DI = "SDI", sdi = sdi_q2, Q = 2, 
            eval.var = "sdi", eval.seq = seq(sdi_q2_quantiles[1], 
                                             sdi_q2_quantiles[2],
-                                            length.out = 20), 
+                                            length.out = 10), 
            y.max = 1)
 
 for(x.ind in seq_along(x.list)){
