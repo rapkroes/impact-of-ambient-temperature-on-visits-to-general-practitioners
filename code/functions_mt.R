@@ -995,9 +995,13 @@ genetic.algorithm<- function(optim.seed, n = 50, pcrossover = 0.8,
     generation.results<- as.data.frame(cbind(X, Y, Y_round, delta_t))|>
       arrange(Y_round, delta_t)
     results[[s]]<- generation.results
-    if(generation.results$Y_round[1] <= best.in.class$Y_round[1] & 
-       generation.results$delta_t[1] < best.in.class$delta_t[1]){
-      best.in.class<- generation.results[1,]
+    if(generation.results$Y_round[1] <= best.in.class$Y_round[1]){
+      if(generation.results$Y_round[1] == best.in.class$Y_round[1] & 
+         generation.results$delta_t[1] < best.in.class$delta_t[1]){
+        best.in.class<- generation.results[1,]
+      }else if(generation.results$Y_round[1] < best.in.class$Y_round[1]){
+        best.in.class<- generation.results[1,]
+      }
     }
   }
   
