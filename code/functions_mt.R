@@ -1157,7 +1157,7 @@ performance.plots<- function(predicted.var, di, practiceID, galist, y.name,
     file.names<- paste0(prefix, " ", quants_3, "_", di, ".png")
     if(isTRUE(alt.path)){
       for(p in seq_along(file.names)){
-        file.names[i]<- file.path(paste0("N:/StudentischeHilfskraefte/_Kroes (Christoph)/Routinedaten/03_Hitze/R/", file.names[i]))
+        file.names[p]<- file.path(paste0("N:/StudentischeHilfskraefte/_Kroes (Christoph)/Routinedaten/03_Hitze/R/", file.names[p]))
       }
     }
   }else if(predicted.var %in% c("gender", "phi")){
@@ -1260,7 +1260,7 @@ performance.plots<- function(predicted.var, di, practiceID, galist, y.name,
     tick.df$date<- as.Date(paste(tick.df$year, tick.df$month, "01", sep = "-"))
     tick.df$print_date<- paste(tick.df$month, tick.df$year, sep = "/")
     tick.df$TG_DateNum<- date2TG_DateNum(tick.df$date)
-    
+
     png(file.names[i])
     plot(ref.matrix[,i + 1] ~ ref.matrix[,1], type = "l", xlab = "time", 
          ylab = y.name, main = plot.names[i], ylim = y.range, las = 1, 
