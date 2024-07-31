@@ -684,13 +684,13 @@ df_qx<- function(inputdf = full.df_7, di, q, save.q1.y = FALSE){
   
   addage<- inputdf[, grepl("chronic", colnames(inputdf))]
   out<- cbind(addage, out)
-  
+
   out<- distinct(out)
   if(save.q1.y){
     assign("y.age", out$age, envir = .GlobalEnv)
     assign("y.gender", out$female, envir = .GlobalEnv)
     assign("y.phi", out$PKV, envir = .GlobalEnv)
-    assign("y.chronic", out$chronic, envir = .GlobalEnv)
+    assign("y.chronic", out$no_all_chronic_diseases, envir = .GlobalEnv)
   }else{
     if(q == 1){
       out<- out|>
