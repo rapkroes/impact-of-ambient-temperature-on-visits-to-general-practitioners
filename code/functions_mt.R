@@ -1389,17 +1389,17 @@ model.eval<- function(booster, DI, sdi, Q, eval.var, eval.seq, quant = NA,
                   "musculoskeletal disorders", 
                   "other diseases and injuries")
       plot.name<- paste("Effects of", x.name, "on", y.names[i])
-      file.name<- paste0(x.name, "_", y.names[i], ".png")
+      file.name<- paste0("Q", Q, " ", x.name, "_", y.names[i], ".png")
       table.name<- paste0(x.name, "_", y.names[i], ".csv")
     }else{
       if(!is.na(quant)){
         plot.name<- paste0("Effects of ", x.name, " on ", y.name, 
                            " (alpha=", quant, ")")
-        file.name<- paste0(x.name, "_", y.name, "_", quant, ".png")
+        file.name<- paste0("Q", Q, " ", x.name, "_", y.name, "_", quant, ".png")
         table.name<- paste0(x.name, "_", y.name, "_", quant, ".csv")
       }else{
         plot.name<- paste("Effects of", x.name, "on", y.name)
-        file.name<- paste0("Q", Q, x.name, "_", y.name, ".png")
+        file.name<- paste0("Q", Q, " ", x.name, "_", y.name, ".png")
         table.name<- paste0(x.name, "_", y.name, ".csv")
       }
     }
