@@ -33,6 +33,34 @@ for(i in 1:3){
   for(quant in c(".05", ".25", ".50", ".75", ".95")){
     model.eval(booster = get(paste0("model_age", quant, "_", di)), DI = di,
                sdi = unlist(hyperpars_age$best_in_class[12:21]), Q = 1, 
+               eval.var = di.var, eval.seq = x.eval.seq[[i]], 
+               quant = as.numeric(quant), y.max = 100, y.name = "age", 
+               y.label = "age")
+    model.eval(booster = get(paste0("model_chronic", quant, "_", di)), DI = di,
+               sdi = unlist(hyperpars_age$best_in_class[12:21]), Q = 1, 
+               eval.var = di.var, eval.seq = x.eval.seq[[i]], 
+               quant = as.numeric(quant), y.max = 30, y.label = "total no.",
+               y.name = "total number of chronic diseases")
+  }
+  model.eval(booster = get(paste0("model_gender", "_", di)), DI = di,
+             sdi = unlist(hyperpars_age$best_in_class[12:21]), Q = 1, 
+             eval.var = di.var, eval.seq = x.eval.seq[[i]], 
+             y.max = 100, y.label = "proportion", 
+             y.name = "proportion of female patients")
+  model.eval(booster = get(paste0("model_phi", "_", di)), DI = di,
+             sdi = unlist(hyperpars_age$best_in_class[12:21]), Q = 1, 
+             eval.var = di.var, eval.seq = x.eval.seq[[i]], 
+             y.max = 100, y.label = "proportion", 
+             y.name = "proportion of privately insured individuals")
+}
+
+wrapper.fun<- function(i){
+  browser()
+  di <- c("TDI", "HW", "SDI")[i]
+  di.var<- c("thoms_discomfort_index", "length_heatwave", "sdi_q1")[i]
+  for(quant in c(".05", ".25", ".50", ".75", ".95")){
+    model.eval(booster = get(paste0("model_age", quant, "_", di), envir = .GlobalEnv), DI = di,
+               sdi = unlist(hyperpars_age$best_in_class[12:21]), Q = 1, 
                eval.var = di.var, eval.seq = x.eval.seq[i], 
                quant = as.numeric(quant), y.max = 100, y.name = "age", 
                y.label = "age")
@@ -53,3 +81,4 @@ for(i in 1:3){
              y.max = 100, y.label = "proportion", 
              y.name = "proportion of privately insured individuals")
 }
+wrapper.fun(1)
