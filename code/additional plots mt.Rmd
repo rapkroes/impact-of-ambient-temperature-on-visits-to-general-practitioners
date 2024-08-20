@@ -211,7 +211,8 @@ sdi.vis_w<- function(hyp.vec, hyp.name){
     geom_line() +
     labs(title = paste0("Discomfort index weight lags (", hyp.name, ")"),
          x = "lag no.", y = "weight")
-  ggsave(filename = paste0("weights_", hyp.name, ".png"), device = "png")
+  ggsave(filename = paste0("weights_", hyp.name, ".png"), device = "png",
+         width = 16, height = 12, units = "cm")
 }
 sdi.vis_dd<- function(hyp.vec, hyp.name){
   #daily discomfort
@@ -237,12 +238,18 @@ sdi.vis_dd<- function(hyp.vec, hyp.name){
     geom_point(aes(x = T_C, y= DI, col = humidity)) +
     
     labs(title = paste0("day-specific discomfort level (", hyp.name, ")"), 
-         x = "temperature (°C)", y = "discomfort (standardised)", colour = "humidity")
-  ggsave(filename = paste0("dailydisc_", hyp.name, ".png"), device = "png")
+         x = "temperature (°C)", y = "single day discomfort (standardised)", 
+         colour = "humidity")
+  ggsave(filename = paste0("dailydisc_", hyp.name, ".png"), device = "png",
+         width = 16, height = 12, units = "cm")
 }
 
-sdi.hyp_q2<- c(6, 1.851, 3.149, 0.044, -0.300, 0.187, -0.375, -0.048, -0.270, 
-               0.389)
+sdi.hyp_q1<- c(7, 0.629, 3.213, 0.291, 0.020, 0.142, -0.035, 0.055, 0.039, 
+               -0.207)
+sdi.hyp_q2<- c(8, 1.900, 3.545, 0.683, -0.055, 0.109, 0.297, 0.227, -0.150, 
+               0.026)
+sdi.vis_w(sdi.hyp_q1, "research question 1")
+sdi.vis_dd(sdi.hyp_q1, "research question 1")
 sdi.vis_w(sdi.hyp_q2, "research question 2")
 sdi.vis_dd(sdi.hyp_q2, "research question 2")
 
