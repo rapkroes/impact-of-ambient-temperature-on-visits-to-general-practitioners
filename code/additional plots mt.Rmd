@@ -255,4 +255,38 @@ sdi.vis_dd(sdi.hyp_q2, "research question 2")
 
 
 ```
+```{r}
+# redrawn Q2 month plots
+#clear work space and read in datasets
+short.names<- c("digestive", "respiratory", "endocrine", "genitourinary", 
+                "cardiovascular", "mental", "musculoskeletal", "others")
+long.names<- c("diseases of the digestive system",
+               "diseases of the respiratory system",
+               "endocrine, nutritional, and metabolic disorders",
+               "genitourinary disorders",
+               "major cardivascular diseases", 
+               "mental and behavioural disorders",
+               "musculoskeletal disorders",
+               "other diseases and injuries")
+for(i in seq(1, 8)){
+  df<- get(ls()[i + 4])
+  plot.name<- paste("Effects of month on", long.names[i])
+  file.name<- paste0("Q2 month_", short.names[i], "_redone.png")
+  plot_i<- ggplot(data = df, 
+                  aes(x = input, y = outcome, col = as.factor(quant))) +
+    coord_cartesian(ylim = c(0, 1)) +
+    geom_line() +
+    scale_x_continuous(breaks = 1:12,
+                       labels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")) +
+    labs(title = plot.name, x = "month", y = "proportion") +
+    scale_colour_manual(values = c("0.05" = "red", "0.25" = "blue", 
+                                   "0.5" = "black", "0.75" = "blue",
+                                   "0.95" = "red")) +
+    labs(colour = "quantile") +
+    theme(legend.position = "bottom")
+    ggsave(filename = file.name, device = "png")
+}
+```
+
 
