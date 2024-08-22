@@ -256,7 +256,7 @@ sdi.vis_dd(sdi.hyp_q2, "research question 2")
 
 ```
 ```{r}
-# redrawn Q2 month plots
+# redrawn RQ2 month plots
 #clear work space and read in datasets
 short.names<- c("digestive", "respiratory", "endocrine", "genitourinary", 
                 "cardiovascular", "mental", "musculoskeletal", "others")
@@ -287,6 +287,54 @@ for(i in seq(1, 8)){
     theme(legend.position = "bottom")
     ggsave(filename = file.name, device = "png")
 }
+```
+```{r}
+# redrawn RQ1 month plots
+# clear work space and read in data
+df_age<- cbind(rbind(month_age_0.05, month_age_0.25, month_age_0.5, 
+                     month_age_0.75, month_age_0.95), 
+               sort(rep(c(.05, .25, .5, .75, .95), 60)))|>
+  filter(quant == 0.5)|>
+  select(-quant)
+colnames(df_age)<- colnames(month_age_0.05)
+
+plot_i<- ggplot(data = df_age, 
+                aes(x = input, y = outcome, col = as.factor(quant))) +
+    coord_cartesian(ylim = c(0, 100)) +
+    geom_line() +
+    scale_x_continuous(breaks = 1:12,
+                       labels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")) +
+    labs(title = "Effects of month on age", x = "month", y = "age") +
+    scale_colour_manual(values = c("0.05" = "red", "0.25" = "blue", 
+                                   "0.5" = "black", "0.75" = "blue",
+                                   "0.95" = "red")) +
+    labs(colour = "quantile") +
+    theme(legend.position = "bottom")
+ggsave(filename = "Q1 month_age_all-quantiles.png", device = "png")
+
+df_chronic<- cbind(rbind(month_chronic_0.05, month_chronic_0.25, 
+                         month_chronic_0.5, month_chronic_0.75, 
+                         month_chronic_0.95), 
+                   sort(rep(c(.05, .25, .5, .75, .95), 60)))|>
+  filter(quant == 0.5)|>
+  select(-quant)
+colnames(df_chronic)<- colnames(month_chronic_0.05)
+
+plot_i<- ggplot(data = df_chronic, 
+                aes(x = input, y = outcome, col = as.factor(quant))) +
+    coord_cartesian(ylim = c(0, 30)) +
+    geom_line() +
+    scale_x_continuous(breaks = 1:12,
+                       labels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")) +
+    labs(title = "Effects of month on total no. of chronic diseases", x = "month", y = "age") +
+    scale_colour_manual(values = c("0.05" = "red", "0.25" = "blue", 
+                                   "0.5" = "black", "0.75" = "blue",
+                                   "0.95" = "red")) +
+    labs(colour = "quantile") +
+    theme(legend.position = "bottom")
+ggsave(filename = "Q1 month_chronic_all-quantiles.png", device = "png")
 ```
 
 
