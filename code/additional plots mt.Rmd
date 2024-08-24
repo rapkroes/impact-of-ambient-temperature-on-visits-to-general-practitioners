@@ -289,7 +289,7 @@ for(i in seq(1, 8)){
 }
 ```
 ```{r}
-# redrawn RQ1 month plots
+# redrawn RQ1 month plots I
 # clear work space and read in data
 df_age<- cbind(rbind(month_age_0.05, month_age_0.25, month_age_0.5, 
                      month_age_0.75, month_age_0.95), 
@@ -313,13 +313,13 @@ plot_i<- ggplot(data = df_age,
     theme(legend.position = "bottom")
 ggsave(filename = "Q1 month_age_all-quantiles.png", device = "png")
 
-df_chronic<- cbind(rbind(month_chronic_0.05, month_chronic_0.25, 
-                         month_chronic_0.5, month_chronic_0.75, 
-                         month_chronic_0.95), 
+df_chronic<- cbind(rbind(month_chronic_0.05.csv, month_chronic_0.25.csv,
+                         month_chronic_0.5.csv, month_chronic_0.75.csv,
+                         month_chronic_0.95.csv), 
                    sort(rep(c(.05, .25, .5, .75, .95), 60)))|>
   filter(quant == 0.5)|>
   select(-quant)
-colnames(df_chronic)<- colnames(month_chronic_0.05)
+colnames(df_chronic)<- colnames(month_chronic_0.05.csv)
 
 plot_i<- ggplot(data = df_chronic, 
                 aes(x = input, y = outcome, col = as.factor(quant))) +
@@ -328,13 +328,196 @@ plot_i<- ggplot(data = df_chronic,
     scale_x_continuous(breaks = 1:12,
                        labels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", 
                                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")) +
-    labs(title = "Effects of month on total no. of chronic diseases", x = "month", y = "age") +
+    labs(title = "Effects of month on total no. of chronic diseases", x = "month", y = "no. chronic diseases") +
     scale_colour_manual(values = c("0.05" = "red", "0.25" = "blue", 
                                    "0.5" = "black", "0.75" = "blue",
                                    "0.95" = "red")) +
     labs(colour = "quantile") +
     theme(legend.position = "bottom")
 ggsave(filename = "Q1 month_chronic_all-quantiles.png", device = "png")
+```
+```{r}
+# redrawn RQ1 month plots II
+# clear work space and read in data
+
+plot_i<- ggplot(data = month_gender.csv, 
+                aes(x = input, y = outcome, col = as.factor(quant))) +
+    coord_cartesian(ylim = c(0, 1)) +
+    geom_line() +
+    scale_x_continuous(breaks = 1:12,
+                       labels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")) +
+    labs(title = "Effects of month on proportion of female patients", x = "month", y = "proportion") +
+    scale_colour_manual(values = c("0.05" = "red", "0.25" = "blue", 
+                                   "0.5" = "black", "0.75" = "blue",
+                                   "0.95" = "red")) +
+    labs(colour = "quantile") +
+    theme(legend.position = "bottom")
+ggsave(filename = "Q1 month_gender.png", device = "png")
+
+plot_i<- ggplot(data = month_phi.csv, 
+                aes(x = input, y = outcome, col = as.factor(quant))) +
+    coord_cartesian(ylim = c(0, 1)) +
+    geom_line() +
+    scale_x_continuous(breaks = 1:12,
+                       labels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")) +
+    labs(title = "Effects of month on proportion of privately insured patients", x = "month", y = "proportion") +
+    scale_colour_manual(values = c("0.05" = "red", "0.25" = "blue", 
+                                   "0.5" = "black", "0.75" = "blue",
+                                   "0.95" = "red")) +
+    labs(colour = "quantile") +
+    theme(legend.position = "bottom")
+ggsave(filename = "Q1 month_phi.png", device = "png")
+```
+
+```{r}
+# redrawn RQ1 TDI/HW/SDI plots
+# clear work space and read in data
+# file.names<- list.files(path = "C:/Users/Raphael (limited)/Desktop/Master Thesis/data analysis/impact-of-ambient-temperature-on-visits-to-general-practitioners/results RQ1/tables")
+# for (i in seq_along(file.names)) {
+#   assign(file.names[i], read.csv(file = paste0("C:/Users/Raphael (limited)/Desktop/Master Thesis/data analysis/impact-of-ambient-temperature-on-visits-to-general-practitioners/results RQ1/tables/", file.names[i])))
+# }
+df_tdi_age<- cbind(rbind(`Thom's discomfort index_age_0.05.csv`,
+                         `Thom's discomfort index_age_0.25.csv`,
+                         `Thom's discomfort index_age_0.5.csv`,
+                         `Thom's discomfort index_age_0.75.csv`,
+                         `Thom's discomfort index_age_0.95.csv`), 
+               sort(rep(c( .05, .25, .5, .75, .95), 50)))|>
+  filter(quant == 0.5)|>
+  select(-quant)
+colnames(df_tdi_age)<- colnames(`Thom's discomfort index_age_0.05.csv`)
+
+plot_i<- ggplot(data = df_tdi_age, 
+                aes(x = input, y = outcome, col = as.factor(quant))) +
+    coord_cartesian(ylim = c(0, 100)) +
+    geom_line() +
+    scale_x_continuous() +
+    labs(title = "Effects of length of Thom's discomfort index on age", x = "TDI", y = "age") +
+    scale_colour_manual(values = c("0.05" = "red", "0.25" = "blue", 
+                                   "0.5" = "black", "0.75" = "blue",
+                                   "0.95" = "red")) +
+    labs(colour = "quantile") +
+    theme(legend.position = "bottom")
+ggsave(filename = "Q1 TDI_age_all-quantiles.png", device = "png")
+
+df_tdi_chronic<- cbind(
+  rbind(`Thom's discomfort index_total number of chronic diseases_0.05.csv`,
+        `Thom's discomfort index_total number of chronic diseases_0.25.csv`,
+        `Thom's discomfort index_total number of chronic diseases_0.5.csv`,
+        `Thom's discomfort index_total number of chronic diseases_0.75.csv`,
+        `Thom's discomfort index_total number of chronic diseases_0.95.csv`), 
+                   sort(rep(c(.05, .25, .5, .75, .95), 50)))|>
+  filter(quant == 0.5)|>
+  select(-quant)
+colnames(df_tdi_chronic)<- colnames(`Thom's discomfort index_total number of chronic diseases_0.05.csv`)
+
+plot_i<- ggplot(data = df_tdi_chronic, 
+                aes(x = input, y = outcome, col = as.factor(quant))) +
+    coord_cartesian(ylim = c(0, 30)) +
+    geom_line() +
+    scale_x_continuous() +
+    labs(title = "Effects of Thom's discomfort index on total no. of chronic diseases", x = "TDI", y = "no. chronic diseases") +
+    scale_colour_manual(values = c("0.05" = "red", "0.25" = "blue", 
+                                   "0.5" = "black", "0.75" = "blue",
+                                   "0.95" = "red")) +
+    labs(colour = "quantile") +
+    theme(legend.position = "bottom")
+ggsave(filename = "Q1 TDI_chronic_all-quantiles.png", device = "png")
+
+df_hw_age<- cbind(rbind(`length heatwave_age_0.05.csv`, 
+                        `length heatwave_age_0.25.csv`,
+                        `length heatwave_age_0.5.csv`,
+                        `length heatwave_age_0.75.csv`,
+                        `length heatwave_age_0.95.csv`), 
+               sort(rep(c(.05, .25, .5, .75, .95), 40)))|>
+  filter(quant == 0.5)|>
+  select(-quant)
+colnames(df_hw_age)<- colnames(`length heatwave_age_0.05.csv`)
+
+plot_i<- ggplot(data = df_hw_age, 
+                aes(x = input, y = outcome, col = as.factor(quant))) +
+    coord_cartesian(ylim = c(0, 100)) +
+    geom_line() +
+    scale_x_continuous() +
+    labs(title = "Effects of lengths of heat waves on age", x = "no. days into the heat wave", y = "age") +
+    scale_colour_manual(values = c("0.05" = "red", "0.25" = "blue", 
+                                   "0.5" = "black", "0.75" = "blue",
+                                   "0.95" = "red")) +
+    labs(colour = "quantile") +
+    theme(legend.position = "bottom")
+ggsave(filename = "Q1 HW_age_all-quantiles.png", device = "png")
+
+df_hw_chronic<- cbind(
+  rbind(`length heatwave_total number of chronic diseases_0.05.csv`,
+        `length heatwave_total number of chronic diseases_0.25.csv`,
+        `length heatwave_total number of chronic diseases_0.5.csv`,
+        `length heatwave_total number of chronic diseases_0.75.csv`,
+        `length heatwave_total number of chronic diseases_0.95.csv`), 
+                   sort(rep(c(.05, .25, .5, .75, .95), 40)))|>
+  filter(quant == 0.5)|>
+  select(-quant)
+colnames(df_hw_chronic)<- colnames(`length heatwave_total number of chronic diseases_0.05.csv`)
+
+plot_i<- ggplot(data = df_hw_chronic, 
+                aes(x = input, y = outcome, col = as.factor(quant))) +
+    coord_cartesian(ylim = c(0, 30)) +
+    geom_line() +
+    scale_x_continuous() +
+    labs(title = "Effects of lengths of heat waves on total no. of chronic diseases", x = "no. days into the heat wave", y = "no.chronic diseases") +
+    scale_colour_manual(values = c("0.05" = "red", "0.25" = "blue", 
+                                   "0.5" = "black", "0.75" = "blue",
+                                   "0.95" = "red")) +
+    labs(colour = "quantile") +
+    theme(legend.position = "bottom")
+ggsave(filename = "Q1 HW_chronic_all-quantiles.png", device = "png")
+
+df_sdi_age<- cbind(rbind(`suggested discomfort index_age_0.05.csv`,
+                         `suggested discomfort index_age_0.25.csv`,
+                         `suggested discomfort index_age_0.5.csv`,
+                         `suggested discomfort index_age_0.75.csv`,
+                         `suggested discomfort index_age_0.95.csv`), 
+               sort(rep(c( .05, .25, .5, .75, .95), 50)))|>
+  filter(quant == 0.5)|>
+  select(-quant)
+colnames(df_sdi_age)<- colnames(`suggested discomfort index_age_0.05.csv`)
+
+plot_i<- ggplot(data = df_sdi_age, 
+                aes(x = input, y = outcome, col = as.factor(quant))) +
+    coord_cartesian(ylim = c(0, 100)) +
+    geom_line() +
+    scale_x_continuous() +
+    labs(title = "Effects of length of suggested discomfort index on age", x = "SDI", y = "age") +
+    scale_colour_manual(values = c("0.05" = "red", "0.25" = "blue", 
+                                   "0.5" = "black", "0.75" = "blue",
+                                   "0.95" = "red")) +
+    labs(colour = "quantile") +
+    theme(legend.position = "bottom")
+ggsave(filename = "Q1 SDI_age_all-quantiles.png", device = "png")
+
+df_sdi_chronic<- cbind(
+  rbind(`suggested discomfort index_total number of chronic diseases_0.05.csv`,
+        `suggested discomfort index_total number of chronic diseases_0.25.csv`,
+        `suggested discomfort index_total number of chronic diseases_0.5.csv`,
+        `suggested discomfort index_total number of chronic diseases_0.75.csv`,
+        `suggested discomfort index_total number of chronic diseases_0.95.csv`), 
+                   sort(rep(c(.05, .25, .5, .75, .95), 50)))|>
+  filter(quant == 0.5)|>
+  select(-quant)
+colnames(df_sdi_chronic)<- colnames(`suggested discomfort index_total number of chronic diseases_0.05.csv`)
+
+plot_i<- ggplot(data = df_sdi_chronic, 
+                aes(x = input, y = outcome, col = as.factor(quant))) +
+    coord_cartesian(ylim = c(0, 30)) +
+    geom_line() +
+    scale_x_continuous() +
+    labs(title = "Effects of suggested discomfort index on total no. of chronic diseases", x = "SDI", y = "no. chronic diseases") +
+    scale_colour_manual(values = c("0.05" = "red", "0.25" = "blue", 
+                                   "0.5" = "black", "0.75" = "blue",
+                                   "0.95" = "red")) +
+    labs(colour = "quantile") +
+    theme(legend.position = "bottom")
+ggsave(filename = "Q1 SDI_chronic_all-quantiles.png", device = "png")
 ```
 
 
